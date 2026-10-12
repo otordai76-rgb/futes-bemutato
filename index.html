@@ -92,9 +92,10 @@ label.sor{display:flex;justify-content:space-between;align-items:center;gap:10px
 .cso{fill:none;stroke-width:7;stroke-linecap:round;stroke-linejoin:round}
 .cso.e{stroke:var(--meleg)}.cso.v{stroke:var(--hideg)}.cso.all{opacity:.35}
 .aram{fill:none;stroke:#fff;stroke-width:2.5;stroke-linecap:round;stroke-dasharray:2 16;opacity:0}
-.fut .aram{opacity:.75;animation:aram 1.1s linear infinite}
+.fut .aram,.aram.megy{opacity:.75;animation:aram 1.1s linear infinite}
 @keyframes aram{to{stroke-dashoffset:-18}}
-.lapat{transform-box:fill-box;transform-origin:center}.fut .lapat{animation:forog 1.2s linear infinite}
+.lapat{transform-box:fill-box;transform-origin:center}.fut .lapat,.lapat.megy{animation:forog 1.2s linear infinite}
+.kor-sor.ket{grid-template-columns:repeat(3,1fr);margin-top:8px}
 @keyframes forog{to{transform:rotate(360deg)}}
 .kor-sor{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
 .kor-sor div{background:var(--s2);border-radius:14px;padding:9px 8px;text-align:center}
@@ -199,6 +200,8 @@ svg.ichart text{fill:#7d8ba5;font-size:11px}
   <div id="futesResz">
   <h2 class="resz">Fűtőkörök</h2>
   <div class="grid2" id="korok"></div>
+  <h2 class="resz">Hőszivattyú</h2>
+  <div id="hoszi"></div>
   <h2 class="resz">Melegvíz és hőtárolás</h2>
   <div class="grid2" id="tartalyok"></div>
   <h2 class="resz">Honnan jön a meleg?</h2>
@@ -277,6 +280,7 @@ svg.ichart text{fill:#7d8ba5;font-size:11px}
     const z=(a,s)=>Math.round((a+Math.sin(Date.now()/s)*a*.03)*10)/10, futP=R.some(r=>r.van&&r.igeny)?1:0;
     return{kor_ms:800,friss:true,ido:'',v:{m03:futP?z(31.4,9000):26.1,m04:futP?z(27.2,11000):25.4,m05:44.8,m06:38.1,m07:6.3,m12:41.5,m13:38.2,m14:36.5,m16:34,
       bojler_fent:52.3,puffer_fent:z(47.8,30000),b_szaz:0,p_szaz:Math.round(z(62,7000)),b_kont:0,p_kont:1,di_pompa2:futP,di_pompa3:0,di_igenyp:futP,di_igenyr:0,
+      m15:31.2,lg_elo:z(36.5,13000),lg_vissza:z(31.2,17000),lg_aram:24.5,lg_pompa:1,lg_komp:1,lg_hmv:Math.floor(Date.now()/45000)%2,lg_defrost:0,
       i_p:Math.round(z(4250,5000)),i_nap:12.4,h_p:Math.round(z(35,3000)),e3_p:Math.round(z(1840,8000)),kazan_be:0,imp_nap:3.2,exp_nap:0.4,b_nap:2.1,p_nap:4.6,hsz_nap:7.9}};
   }
   function idojaras(){
@@ -440,6 +444,47 @@ function korKartya(tip,ikon,nev,e,v,megy,igeny,cel,szelep){
     '<div><span>'+(cel!=null?'Kívánt előremenő':'Lehűlés a körben')+'</span><b>'+fok(cel!=null?cel:dt)+'<small>°C</small></b></div></div>'+
     '<div class="kor-all">'+all+'</div></div>';
 }
+function hsKartya(v){
+  const e=v.lg_elo!=null?v.lg_elo:v.m14, vi=v.lg_vissza!=null?v.lg_vissza:v.m15, p=v.e3_p;
+  const megy=v.lg_komp!=null?v.lg_komp===1:(p==null?null:p>50);
+  const pompa=v.lg_pompa!=null?v.lg_pompa===1:!!megy;
+  const hmv=v.lg_hmv==null?null:v.lg_hmv===1;
+  const ho=v.lg_aram!=null&&e!=null&&vi!=null&&megy?v.lg_aram/60*4186*(e-vi):null;
+  const cop=ho!=null&&p>100?ho/p:null;
+  const A=pompa&&hmv===true, B=pompa&&hmv===false;
+  const cso=(d,c,megyE,all)=>'<path class="cso '+c+(all?' all':'')+'" d="'+d+'"/><path class="aram'+(megyE?' megy':'')+'" d="'+d+'"/>';
+  const tart=(y,nev,t,akt)=>'<rect x="252" y="'+y+'" width="60" height="34" rx="12" fill="'+hoSzin(t)+'" stroke="'+(akt?'#fff':'#cbd5e1')+'" stroke-opacity="'+(akt?1:.4)+'" stroke-width="'+(akt?2.5:1.5)+'"/>'+
+    '<text x="282" y="'+(y+15)+'" text-anchor="middle" font-size="10" font-weight="700" style="fill:#0b1220">'+nev+'</text>'+
+    '<text x="282" y="'+(y+28)+'" text-anchor="middle" font-size="12" font-weight="800" style="fill:#0b1220">'+(t!=null?fok(t)+'°':'')+'</text>';
+  const svg='<svg viewBox="0 0 320 150">'+
+    cso('M70 42H170','e',pompa)+cso('M70 122H170','v',pompa)+
+    cso('M170 42H252','e',A,hmv===false)+cso('M312 42H316V122H282','v',A,hmv===false)+
+    cso('M170 42V84H252','e',B,hmv===true)+cso('M282 101V122','v',B,hmv===true)+cso('M282 122H170','v',B||A,false)+
+    tart(25,'melegvíz',v.bojler_fent,A)+tart(67,'puffer',v.puffer_fent,B)+
+    '<rect x="6" y="28" width="64" height="108" rx="12" fill="#1a2540" stroke="#cbd5e1" stroke-width="2"/>'+
+    '<circle cx="38" cy="66" r="22" fill="#0b1220" stroke="#64748b" stroke-width="1.5"/>'+
+    '<g class="lapat'+(megy?' megy':'')+'"><path d="M38 66C30 52 46 46 38 66ZM38 66C54 60 58 76 38 66ZM38 66C34 84 20 74 38 66Z" fill="#cbd5e1"/><circle cx="38" cy="66" r="22" fill="none"/></g>'+
+    '<text x="38" y="108" text-anchor="middle" font-size="10" fill-opacity=".7">'+(megy==null?'':megy?(v.lg_defrost===1?'leolvaszt':'működik'):'áll')+'</text>'+
+    '<text x="38" y="124" text-anchor="middle" font-size="12" font-weight="800">'+(p!=null?(Math.abs(p)>=1000?szam(p/1000,1)+' kW':szam(p,0)+' W'):'')+'</text>'+
+    '<g transform="translate(128 42)"><circle r="15" fill="#141d2e" stroke="#cbd5e1" stroke-width="2.5"/><g class="lapat'+(pompa?' megy':'')+'"><path d="M0 -10A10 10 0 0 1 8.7 5L0 0Z M0 0L-8.7 5A10 10 0 0 1 0 -10" fill="#cbd5e1" opacity=".9"/></g></g>'+
+    '<g transform="translate(170 42)"><path d="M-14 -10L0 0L-14 10Z M14 -10L0 0L14 10Z M-10 14L0 0L10 14Z" fill="#cbd5e1" stroke="#0b1220" stroke-width="1.5"/><circle r="4" fill="#0b1220"/></g>'+
+    '<text x="146" y="16" text-anchor="end" font-size="11" fill-opacity=".6">szivattyú</text><text x="154" y="16" font-size="11" fill-opacity=".6">váltószelep</text>'+
+    '<circle cx="92" cy="42" r="4.5" fill="#fff" stroke="#0b1220" stroke-width="2"/><circle cx="92" cy="122" r="4.5" fill="#fff" stroke="#0b1220" stroke-width="2"/>'+
+    '<text x="92" y="66" text-anchor="middle" font-size="15" font-weight="800">'+fok(e)+'°</text><text x="92" y="112" text-anchor="middle" font-size="15" font-weight="800">'+fok(vi)+'°</text>'+
+    '</svg>';
+  let all;
+  if(v.lg_hiba)all='<span class=rossz>⚠️ A hőszivattyú hibát jelez (CH'+v.lg_hiba+').</span>';
+  else if(megy==null)all='';
+  else if(!megy)all=pompa?'A kompresszor áll, a szivattyú még kering.':'Most nem működik.';
+  else if(v.lg_defrost===1)all='Leolvaszt – ez pár perc, utána folytatja.';
+  else all=hmv===true?'Most a melegvizet készíti.':hmv===false?'Most a puffert (a fűtést) tölti.':'Működik.';
+  const d=(n,x)=>'<div><span>'+n+'</span><b>'+x+'</b></div>';
+  return '<div class="card kor'+(megy?' fut':'')+'"><div class="kor-fej"><h3>♨️ Hőszivattyú</h3>'+
+    (megy==null?'':'<span class="badge '+(megy?'b-komf':'b-kezi')+'">'+(megy?(hmv===true?'🚿 Melegvíz':hmv===false?'🛢️ Puffer':'🔥 Működik'):'💤 Áll')+'</span>')+'</div>'+svg+
+    '<div class="kor-sor">'+d('Előremenő',fok(e)+'<small>°C</small>')+d('Visszatérő',fok(vi)+'<small>°C</small>')+d('Felvett áram',watt(p))+'</div>'+
+    (ho!=null?'<div class="kor-sor ket">'+d('Leadott hő',watt(ho))+d('Hatékonyság (COP)',cop!=null?szam(cop,1):'–')+d('Átfolyás',szam(v.lg_aram,1)+'<small>l/perc</small>')+'</div>':'')+
+    '<div class="kor-all">'+all+'</div></div>';
+}
 function tartKartya(ikon,nev,fent,lent,szaz,kont,leiras){
   const fut=szaz!=null&&szaz>0.5;
   return '<div class="card"><div class="tart"><svg viewBox="0 0 74 128"><defs><linearGradient id="t'+ikon.codePointAt(0)+'" x1="0" y1="0" x2="0" y2="1">'+
@@ -462,6 +507,7 @@ function rajzolFutes(){
   $('futesResz').classList.toggle('regi',!VF);
   $('korok').innerHTML=korKartya('padlo','🦶','Padlófűtés',v.m03,v.m04,v.di_pompa2==null?null:v.di_pompa2===1,v.di_igenyp,v.pf_cel,v.pf_szelep)+
     korKartya('radiator','🔲','Radiátorok',v.m05,v.m06,v.di_pompa3==null?null:v.di_pompa3===1,v.di_igenyr,v.ra_cel,v.ra_szelep);
+  $('hoszi').innerHTML=hsKartya(v);
   $('tartalyok').innerHTML=tartKartya('🚿','Melegvíz',v.bojler_fent,v.m12,v.b_szaz,v.b_kont,'használati melegvíz')+
     tartKartya('🛢️','Puffertartály',v.puffer_fent,v.m13,v.p_szaz,v.p_kont,'a fűtés hőtárolója');
   const halo=v.h_p==null?'':v.h_p>20?'<span class="badge b-sun">Visszatáplálás</span>':v.h_p<-20?'<span class="badge b-buy">Vásárlás</span>':'<span class="badge b-ok">Egyensúlyban</span>';
@@ -477,7 +523,7 @@ function rajzolFutes(){
 
 const DEMO=location.search.includes('demo')?{m03:31.4,m04:27.2,m05:44.8,m06:38.1,m07:6.3,m12:41.5,m13:38.2,m14:36.5,m16:34,
   bojler_fent:52.3,puffer_fent:47.8,b_szaz:0,p_szaz:62,b_kont:0,p_kont:1,di_pompa2:1,di_pompa3:0,di_igenyp:1,di_igenyr:0,
-  i_p:4250,i_nap:12.4,h_p:35,e3_p:1840,kazan_be:0,imp_nap:3.2,exp_nap:0.4,b_nap:2.1,p_nap:4.6,hsz_nap:7.9}:null;
+  i_p:4250,i_nap:12.4,h_p:35,e3_p:1840,kazan_be:0,m15:31.2,lg_elo:36.5,lg_vissza:31.2,lg_aram:24.5,lg_pompa:1,lg_komp:1,lg_hmv:0,imp_nap:3.2,exp_nap:0.4,b_nap:2.1,p_nap:4.6,hsz_nap:7.9}:null;
 let idoKuldve=false;
 async function frissit(){
   try{
