@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="hu"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PV előrejelző – demó</title>
+<style>
+:root{--bg:#0b1220;--dark:#141d2e;--dark2:#0b1220;--surface:#141d2e;--surface2:#16233b;--text:#e9eef7;--muted:#8291ab;
+  --line:#232f47;--line2:#26344f;--blue:#2563eb;--cyan:#06b6d4;--green:#16a34a;--orange:#f97316;--red:#ef4444;--yellow:#eab308;
+  --shadow:0 16px 38px rgba(0,0,0,.45);
+  /* a regi nevek (a JS-ben/inline nem hasznaltak, de a szinosztalyok igen) */
+  --fg:var(--text);--mut:var(--muted);--ok:#22c55e;--warn:#f59e0b;--err:var(--red);--acc:var(--cyan);--card:var(--surface)}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;color:var(--text);min-height:100vh;font-size:14px;line-height:1.4;
+  background:radial-gradient(circle at top left,rgba(6,182,212,.14),transparent 30%),radial-gradient(circle at top right,rgba(37,99,235,.12),transparent 30%),
+  linear-gradient(135deg,var(--bg),#0d1420 45%,#0a1018)}
+.app{display:grid;grid-template-columns:270px 1fr;min-height:100vh}
+.sidebar{position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:24px 20px;color:#fff;
+  background:radial-gradient(circle at 20% 0%,rgba(6,182,212,.24),transparent 30%),linear-gradient(180deg,var(--dark),var(--dark2))}
+.brand{display:flex;align-items:center;gap:14px;margin-bottom:30px}
+.brand-icon{width:52px;height:52px;border-radius:18px;display:grid;place-items:center;font-size:25px;
+  background:linear-gradient(135deg,#f97316,#ef4444,#2563eb);box-shadow:0 16px 36px rgba(249,115,22,.25)}
+.brand h1{margin:0;font-size:19px;line-height:1.1}.brand p{margin:5px 0 0;color:#94a3b8;font-size:12px}
+.nav{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;min-height:0}
+.nav-title{margin:22px 8px 10px;color:#64748b;font-size:11px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.nav button{width:100%;display:flex;align-items:center;gap:12px;padding:13px 14px;margin:7px 0;color:#cbd5e1;background:transparent;border:0;
+  text-align:left;border-radius:16px;font-size:14px;cursor:pointer;transition:.2s}
+.nav button:hover,.nav button.active{color:#fff;background:rgba(255,255,255,.10);transform:translateX(4px)}
+.nav-toggle{display:none}
+.sidebar-footer{margin-top:16px;flex-shrink:0;padding:16px;border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12)}
+.online{display:flex;align-items:center;gap:8px;color:#bbf7d0;font-weight:800;font-size:13px;margin-bottom:8px}
+.dot{width:10px;height:10px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 6px rgba(34,197,94,.16);transition:.3s}
+.dot.offline{background:#ef4444;box-shadow:0 0 0 6px rgba(239,68,68,.16)}
+.sidebar-footer span{color:#94a3b8;font-size:12px;line-height:1.5}
+.content{padding:28px;min-width:0}
+.page{display:none;animation:fadeIn .22s ease}.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.topbar{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;margin-bottom:22px}
+.topbar h2{margin:0;font-size:clamp(24px,3vw,34px);letter-spacing:-.04em}
+.topbar p{margin:8px 0 0;color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:22px;align-items:start}
+.chart-card{background:var(--surface);border:1px solid var(--line);border-radius:28px;padding:26px;box-shadow:var(--shadow);margin-bottom:22px;overflow:auto}
+.grid .chart-card{margin-bottom:0}
+.grid{margin-bottom:22px}
+.chart-card h3{margin:0 0 12px;font-size:16px}
+.summary-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px}
+.summary-box{background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px}
+.summary-box span{color:var(--muted);font-size:12px;font-weight:700}.summary-box strong{font-size:18px}
+.btn,button{border:1px solid #5a6d90;border-radius:12px;padding:8px 14px;font-weight:700;font-size:13px;cursor:pointer;transition:.15s;
+  background:linear-gradient(135deg,#46587a,#33415c);color:#e9eef7;font-family:inherit}
+.btn:hover,button:hover{background:linear-gradient(135deg,#55688c,#41526f);border-color:#06b6d4}
+button.pri{border-color:#0891b2;background:linear-gradient(135deg,#0e7490,#155e75)}
+button.dng{border-color:#b91c1c;background:linear-gradient(135deg,#991b1b,#7f1d1d)}
+button:disabled{opacity:.45;cursor:default}
+.nav button,.nav-toggle{font-weight:400}
+.nav button,.nav button:hover{border:0}
+input,select{background:var(--surface2);color:var(--text);border:1px solid var(--line2);border-radius:10px;padding:6px 9px;font:inherit}
+input:focus,select:focus{outline:2px solid var(--cyan);outline-offset:1px}
+input[type=checkbox]{width:16px;height:16px;padding:0;accent-color:#06b6d4}
+table{border-collapse:collapse;width:100%}
+td,th{padding:5px 8px;text-align:left;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;white-space:nowrap}
+th{color:var(--muted);font-weight:700;font-size:12px;position:sticky;top:0;background:var(--surface)}.r{text-align:right}
+#st th{position:static;width:38%}
+.b{display:inline-block;padding:4px 10px;border-radius:999px;font-weight:800;font-size:12px;background:rgba(255,255,255,.12)}
+.ok{background:#16a34a;color:#fff}.warn{background:#f59e0b;color:#000}.err{background:#ef4444;color:#fff}
+b.ok{padding:0 5px;border-radius:6px}
+.mut{color:var(--muted)}.chg{color:#f59e0b}.wr{color:#ef4444}.ev{color:#22d3ee}
+pre{margin:0;font:12px/1.4 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-all}
+label{display:flex;justify-content:space-between;gap:8px;margin:6px 0;align-items:center;color:#cbd5e1}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:8px 0}
+.row label{justify-content:flex-start;margin:0}
+.bar{height:10px;background:var(--surface2);border-radius:6px;overflow:hidden;margin:10px 0}
+.bar>div{height:100%;background:linear-gradient(90deg,#06b6d4,#2563eb)}
+.scroll{max-height:560px;overflow:auto}.mono{font-family:ui-monospace,Consolas,monospace}
+td input{width:160px}
+a{color:#22d3ee}
+.hint{color:var(--muted);font-size:12px;line-height:1.5;margin:10px 0 0}
+#msg:not(:empty){margin-bottom:10px;display:flex;gap:6px;flex-wrap:wrap}
+@media(max-width:1150px){.summary-strip{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:860px){
+  .app{grid-template-columns:1fr}
+  .sidebar{position:sticky;top:0;height:auto;z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+  .sidebar-footer,.nav-title{display:none}
+  .nav{display:none;max-height:60vh;overflow-y:auto}.sidebar.nyitva .nav{display:block}
+  .nav-toggle{display:block;width:100%;margin-top:10px;padding:12px 14px;background:rgba(255,255,255,.10);color:#e9eef7;border:0;border-radius:12px;
+    font-size:14px;font-weight:800;text-align:left;cursor:pointer}
+  .grid{grid-template-columns:1fr}
+}
+@media(max-width:560px){.content{padding:16px}.summary-strip{grid-template-columns:1fr}.chart-card{padding:18px}}
+</style>
+<style>
+.brand-icon{background:linear-gradient(135deg,#facc15,#f97316,#2563eb)!important;box-shadow:0 16px 36px rgba(250,204,21,.25)!important}
+.chart{width:100%;height:auto;display:block}
+.chart text{fill:#8291ab;font-size:11px}
+.leg{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px}
+.leg i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.big{font-size:30px;font-weight:900;letter-spacing:-.03em}
+.ma0{color:#e9eef7}.ma1{color:#8291ab}
+tr.most td{background:rgba(6,182,212,.12)}
+.okk{color:#22c55e}.rossz{color:#ef4444}.sarga{color:#f59e0b}
+#toast{position:fixed;right:20px;bottom:20px;background:#0e7490;color:#fff;padding:10px 16px;border-radius:12px;font-weight:700;box-shadow:var(--shadow);display:none;z-index:50}
+.sor2{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 16px}
+@media(max-width:560px){.sor2{grid-template-columns:1fr}}
+/* --- idojaras (a Kolozsvar-panel nezete) --- */
+.inapok{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:6px 0 10px}
+.inap{border:1px solid var(--line);background:var(--surface2);border-radius:16px;padding:9px 4px;text-align:center;color:var(--text);
+  display:block;width:100%;font-weight:400}
+.inap:hover{background:#1c2b47;border-color:#06b6d4}.inap.on{border-color:#06b6d4;background:#123048}
+.inap .n{font-size:12px;color:var(--muted);font-weight:700}.inap .ik{font-size:28px;line-height:1.25}
+.inap .t{font-weight:800;font-size:14px}.inap .t span{color:var(--muted);font-weight:600}
+.inap .c{font-size:11px;color:#93c5fd;margin-top:2px;line-height:1.3}
+svg.ichart{width:100%;height:190px;display:block;touch-action:pan-y}
+svg.ichart text{fill:#7d8ba5;font-size:11px}
+@media(max-width:380px){.inap .ik{font-size:23px}.inap .t{font-size:13px}}
+</style>
+</head><body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand"><div class="brand-icon">☀</div>
+    <div><h1>PV előrejelző</h1><p>időjárás · napállás · S7-300</p></div></div>
+  <button class="nav-toggle" onclick="menuValt()">&#9776; Menü</button>
+  <div class="nav-title">Nézetek</div>
+  <nav class="nav">
+    <button id="navWifi" onclick="showPage('wifi',this)">📶 WiFi</button>
+    <button id="navAtt" class="active" onclick="showPage('att',this)">⚡ Áttekintő</button>
+    <button onclick="showPage('wx',this)">⛅ Időjárás</button>
+    <button onclick="showPage('nap',this)">☀ Napállás</button>
+    <button onclick="showPage('sol',this)">🔆 Becsült napenergia</button>
+    <button onclick="showPage('str',this)">🧭 String beállítások</button>
+    <button onclick="showPage('s7',this)">🔗 S7-300</button>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="online"><span class="dot" id="onDot"></span><span id="fIdo">--</span></div>
+    <span id="fNet" class="mut"></span>
+  </div>
+</aside>
+
+<div id="toast"></div>
+<main class="content">
+
+<!-- ======================= WIFI ======================= -->
+<section id="page-wifi" class="page">
+  <header class="topbar"><div><h2>WiFi</h2><p>A panel helyi hálózatra kapcsolása. Amíg nincs WiFi, a saját <b>levente</b> hálózatán (jelszó nélkül, 192.168.4.1) érhető el.</p></div></header>
+  <div class="chart-card" style="max-width:760px" id="wAllCard"><h3>Kapcsolat</h3><div id="wAll" style="font-size:15px;line-height:1.6">--</div></div>
+  <div class="chart-card" style="max-width:760px"><h3>Helyi WiFi</h3>
+    <div class="row"><button onclick="wscan()">📶 Hálózatok keresése</button><span id="wsMsg" class="mut"></span></div>
+    <div id="wsLista" class="scroll" style="max-height:260px;margin-bottom:8px"></div>
+    <label>SSID<input id="w_ssid" size="16"></label>
+    <label>Jelszó<input id="w_pass" type="password" size="16" placeholder="üres = a régi marad"></label>
+    <label>Fix IP (üres = DHCP)<input id="w_ip" size="15" placeholder="pl. 192.168.0.50"></label>
+    <label>Maszk<input id="w_mask" size="15" placeholder="255.255.255.0"></label>
+    <label>Átjáró<input id="w_gw" size="15" placeholder="pl. 192.168.0.1"></label>
+    <div class="row"><button class="pri" onclick="wifi()">💾 Mentés + újraindítás</button></div>
+    <p class="hint">A <b>Hálózatok keresése</b> megmutatja, milyen WiFi-ket lát a panel (a legerősebb elöl); egy sorra kattintva beíródik az SSID.
+    Keresés közben a telefon egy pillanatra elveszítheti a kapcsolatot – az oldal újrapróbálja.</p>
+    <p class="hint">A panel indulás után <b>10 percig mindig</b> saját WiFi-t is nyit (<b>levente</b>, jelszó nélkül, http://192.168.4.1/).
+    Ha a helyi WiFi nem csatlakozik (rossz jelszó), a saját hálózat megmarad. VPN-es eléréshez adj meg <b>fix IP-t</b>: VPN-en át csak az IP működik.</p></div>
+  <div class="chart-card" style="max-width:760px"><h3>Átadás / visszaállítás</h3>
+    <div class="row"><button class="dng" onclick="if(confirm('Elfelejti a mentett WiFi-t (a többi beállítás marad), és újraindul. Utána csak a levente hálózaton (192.168.4.1) érhető el. Biztos?'))act('/api/wifitorles').then(t=>t&&uzen(t))">🧹 WiFi elfelejtése</button>
+    <button class="dng" onclick="if(confirm('MINDEN beállítást töröl (WiFi, hely, stringek, S7), gyári állapotba áll és újraindul. Biztos?'))act('/api/gyari').then(t=>t&&uzen(t))">⚠ Gyári alapállapot</button></div>
+    <p class="hint"><b>Átadás előtt</b> a <b>WiFi elfelejtése</b> az ajánlott: a koordináták, a stringek és az S7-beállítások megmaradnak, a panel pedig újraindulás
+    után csak a saját <b>levente</b> hálózatát nyitja – az új tulajdonos a telefonjáról azonnal beállíthatja a saját WiFi-jét.
+    Ha a WiFi nincs törölve, az sem baj: ahol a mentett hálózat nem érhető el, a <b>levente</b> hálózat magától bekapcsolva marad.</p></div>
+</section>
+
+<!-- ======================= ATTEKINTO ======================= -->
+<section id="page-att" class="page active">
+  <header class="topbar"><div><h2>Áttekintő</h2><p>A legfontosabb értékek egy helyen.</p></div></header>
+  <div class="summary-strip">
+    <div class="summary-box"><span>Termelés most (mért)</span><strong id="aElo">--</strong></div>
+    <div class="summary-box"><span>Becsült most</span><strong id="aBecs">--</strong></div>
+    <div class="summary-box"><span>Ma becsült · még hátra</span><strong id="aMa">--</strong></div>
+    <div class="summary-box"><span>Holnap becsült</span><strong id="aHolnap">--</strong></div>
+  </div>
+  <div class="grid">
+    <div class="chart-card"><h3>Időjárás most</h3><div id="aEg" style="margin:-4px 0 8px"></div><div class="sor2" id="aWx"></div></div>
+    <div class="chart-card"><h3>Nap</h3><div class="sor2" id="aNap"></div></div>
+    <div class="chart-card"><h3>S7-300</h3><div class="sor2" id="aS7"></div></div>
+  </div>
+  <div class="chart-card"><h3>Becsült termelés ma és holnap</h3>
+    <div class="leg"><span><i style="background:#facc15"></i>becsült Wh/óra</span><span><i style="background:#22c55e"></i>mért (ma)</span></div>
+    <div id="aChart"></div></div>
+</section>
+
+<!-- ======================= IDOJARAS ======================= -->
+<section id="page-wx" class="page">
+  <header class="topbar"><div><h2>Időjárás</h2><p>Open-Meteo előrejelzés: ma és a következő 3 nap, óránként; a napenergia-becsléshez a direkt és szórt besugárzás.</p></div></header>
+  <div class="chart-card">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h3 style="margin:0">🌤️ Időjárás</h3><span id="iKint" class="mut"></span></div>
+    <div class="inapok" id="iNapok"></div>
+    <div id="iChart"></div>
+    <div id="iInfo" class="mut" style="font-size:13px;min-height:20px;margin-top:4px"></div>
+    <div id="iFris" class="mut" style="font-size:12px;margin-top:4px"></div></div>
+  <div class="grid">
+  <div class="chart-card"><h3>Helyszín</h3>
+    <label>Szélesség (°)<input id="c_lat" size="10"></label>
+    <label>Hosszúság (°)<input id="c_lon" size="10"></label>
+    <div class="row"><button class="pri" onclick="ment(['lat','lon'])">💾 Mentés</button>
+      <button onclick="gps()">📍 A telefon helye</button><button onclick="act('/api/wxfrissit')">🔄 Lekérés most</button></div>
+    <p class="hint">Mentés után az előrejelzés azonnal újra lekérődik. Állapot: <b id="wxAll">--</b></p></div>
+  </div>
+  <div class="chart-card"><h3>Besugárzás (W/m²)</h3>
+    <div class="leg"><span><i style="background:#facc15"></i>direkt (DNI)</span><span><i style="background:#a78bfa"></i>szórt (DHI)</span></div>
+    <div id="wxChart2"></div></div>
+  <div class="chart-card"><h3>A következő 24 óra (ez kerül az export DB-be)</h3><div class="scroll"><table id="wxTab"></table></div></div>
+</section>
+
+<!-- ======================= NAPALLAS ======================= -->
+<section id="page-nap" class="page">
+  <header class="topbar"><div><h2>Napállás</h2><p>A nap helyzete most, a napkelte, a dél és a napnyugta (NOAA-számítás, helyi idő).</p></div></header>
+  <div class="grid">
+  <div class="chart-card"><h3>A nap útja ma</h3><div id="napIv"></div></div>
+  <div class="chart-card"><h3>Értékek</h3><div class="sor2" id="napErt"></div></div>
+  </div>
+  <div class="chart-card"><h3>Napmagasság óránként (ma)</h3><div id="napChart"></div></div>
+</section>
+
+<!-- ======================= BECSULT NAPENERGIA ======================= -->
+<section id="page-sol" class="page">
+  <header class="topbar"><div><h2>Becsült napenergia</h2><p>Besugárzás-alapú modell a két string beállításaiból, az élő termeléssel összevetve.</p></div></header>
+  <div class="summary-strip">
+    <div class="summary-box"><span>Ma összesen</span><strong id="sMa">--</strong></div>
+    <div class="summary-box"><span>Ma még hátra</span><strong id="sHatra">--</strong></div>
+    <div class="summary-box"><span>Holnap</span><strong id="sHolnap">--</strong></div>
+    <div class="summary-box"><span>Következő 24 óra</span><strong id="sKov">--</strong></div>
+  </div>
+  <div class="grid">
+  <div class="chart-card"><h3>Most</h3><div class="sor2" id="sMost"></div></div>
+  <div class="chart-card"><h3>Ég-faktor</h3><div class="sor2" id="sSky"></div>
+    <p class="hint">Az utolsó 20 percben mért termelés és a modell aránya. Ha a felhő-előrejelzés téved (pl. tiszta égre borultat mond),
+    ez javítja a következő órák becslését; a későbbi órákra fokozatosan 1-re cseng. Korlát: 0,5–2,0.
+    Csak friss élő adattal és legalább 150 W-os modellel számol. Kikapcsolható a String beállításoknál.</p></div>
+  </div>
+  <div class="chart-card"><h3>Ma óránként: becsült és mért</h3>
+    <div class="leg"><span><i style="background:#facc15"></i>becsült</span><span><i style="background:#22c55e"></i>mért</span></div>
+    <div id="solChart"></div>
+    <div class="scroll" style="max-height:420px;margin-top:12px"><table id="solTab"></table></div></div>
+</section>
+
+<!-- ======================= STRINGEK ======================= -->
+<section id="page-str" class="page">
+  <header class="topbar"><div><h2>String beállítások</h2><p>A két PV-string és a modell paraméterei.</p></div></header>
+  <div class="grid">
+  <div class="chart-card"><h3>1. string</h3>
+    <label>Engedélyezve<input type="checkbox" id="c_s1en"></label>
+    <label>Névleges teljesítmény (Wp)<input id="c_s1wp" size="7"></label>
+    <label>Dőlésszög (° a vízszintestől)<input id="c_s1tilt" size="5"></label>
+    <label>Azimut (° – 90 kelet, 180 dél, 270 nyugat)<input id="c_s1azim" size="5"></label></div>
+  <div class="chart-card"><h3>2. string</h3>
+    <label>Engedélyezve<input type="checkbox" id="c_s2en"></label>
+    <label>Névleges teljesítmény (Wp)<input id="c_s2wp" size="7"></label>
+    <label>Dőlésszög (° a vízszintestől)<input id="c_s2tilt" size="5"></label>
+    <label>Azimut (° – 90 kelet, 180 dél, 270 nyugat)<input id="c_s2azim" size="5"></label></div>
+  <div class="chart-card"><h3>Modell</h3>
+    <label>Inverter AC plafon (W, 0 = nincs)<input id="c_invmax" size="7"></label>
+    <label>Rendszerveszteség (%)<input id="c_veszt" size="5"></label>
+    <label>Hőmérsékleti együttható (%/°C)<input id="c_homk" size="5"></label>
+    <label>Horizont (°)<input id="c_horiz" size="5"></label>
+    <label>Ég-faktor korrekció (élő adatból)<input type="checkbox" id="c_skyen"></label>
+    <p class="hint"><b>Rendszerveszteség</b>: inverter, kábelek, szennyeződés (tipikusan 8–14 %). <b>Hőmérsékleti együttható</b>: a panel
+    adatlapján (Pmax), tipikusan 0,35–0,45. <b>Horizont</b>: ennél alacsonyabb napállásnál a direkt sugárzás fokozatosan elmarad (fák, házak);
+    a szórt fény ettől függetlenül számít. <b>Inverter plafon</b>: a becslés ennél nem lehet nagyobb.</p></div>
+  </div>
+  <div class="row"><button class="pri" onclick="ment(['s1en','s1wp','s1tilt','s1azim','s2en','s2wp','s2tilt','s2azim','invmax','veszt','homk','horiz','skyen'])">💾 Mentés</button><span id="strMsg" class="mut"></span></div>
+</section>
+
+<!-- ======================= S7-300 ======================= -->
+<section id="page-s7" class="page">
+  <header class="topbar"><div><h2>S7-300</h2><p>Kapcsolat a PLC-vel (ISO-on-TCP, 102-es port): az élő termelés olvasása és az előrejelzés kiírása egy DB-be.</p></div></header>
+  <div class="grid">
+  <div class="chart-card"><h3>Kapcsolat</h3>
+    <label>Kapcsolódás engedélyezve<input type="checkbox" id="c_s7en"></label>
+    <label>PLC IP-cím<input id="c_s7ip" size="14"></label>
+    <label>Rack<input id="c_rack" size="3"></label>
+    <label>Slot (S7-300: 2)<input id="c_slot" size="3"></label>
+    <div class="row"><button class="pri" onclick="ment(['s7en','s7ip','rack','slot'])">💾 Mentés</button></div>
+    <div class="sor2" id="s7All" style="margin-top:10px"></div></div>
+  <div class="chart-card"><h3>Élő termelés (olvasás)</h3>
+    <label>DB-szám<input id="c_elodb" size="5"></label>
+    <label>Bájtcím (DBD / DBW)<input id="c_eloofs" size="5"></label>
+    <label>Típus<select id="c_elotip"><option value="0">DINT, W (DBD)</option><option value="1">INT, W (DBW)</option><option value="2">REAL, kW (DBD)</option><option value="3">REAL, W (DBD)</option></select></label>
+    <div class="row"><button class="pri" onclick="ment(['elodb','eloofs','elotip'])">💾 Mentés</button></div>
+    <p class="hint">Forrás: a Huawei <b>32080 – Active power</b> regisztere (I32, W, a hálózatra adott AC teljesítmény), ahogy az S7 a Modbusról
+    beolvassa: két szó = <b>DINT a DBD-n</b>. Most olvasva: <b id="s7Elo">--</b></p></div>
+  <div class="chart-card"><h3>Export DB (írás)</h3>
+    <label>DB-szám<input id="c_expdb" size="5"></label>
+    <label>Írás engedélyezve<input type="checkbox" id="c_expen"></label>
+    <div class="row"><button class="pri" onclick="ment(['expdb','expen'])">💾 Mentés</button>
+      <a class="btn" id="awlLink" href="/dl/db.awl" style="text-decoration:none">⬇ AWL letöltése</a></div>
+    <div class="sor2" id="s7Exp" style="margin-top:10px"></div>
+    <p class="hint">Előbb töltsd le az <b>AWL</b>-t (a beállított DB-számmal készül), töltsd be a PLC-be, és <b>csak utána</b> engedélyezd az írást –
+    különben minden írás „nincs ilyen DB” hibát ad. A DB-ben nincs ARRAY: minden mező saját névvel szerepel; az óránkénti blokkok
+    (H00 … H23) a <b>mostani órától</b> indulnak. Minden mező INT.</p></div>
+  </div>
+</section>
+
+</main>
+</div>
+<script>
+const AWL_T={"fej": [[0, "Ev", "ev (NTP; 0 = nincs ido)"], [2, "Ho", "honap"], [4, "Nap", "nap"], [6, "Ora", "ora (helyi)"], [8, "Perc", "perc"], [10, "Mp", "masodperc"], [12, "HetNapja", "0 = vasarnap .. 6 = szombat"], [14, "IdoOK", "1 = ervenyes NTP-ido"], [16, "Eletjel", "minden irasnal +1"], [18, "MeteoOK", "1 = friss idojaras (3 oran belul)"], [20, "MeteoKor", "az utolso idojaras-lekeres kora [perc]"], [22, "EloTermeles", "a PLC-bol olvasott pillanatnyi termeles [W] (visszakuldve)"], [24, "EloOK", "1 = friss eles adat"], [26, "Tartalek26", ""], [28, "Tartalek28", ""], [30, "NapMagassag", "napmagassag [0.1 fok], negativ = horizont alatt"], [32, "NapAzimut", "nap-azimut [0.1 fok], 180 = del"], [34, "NapkelteOra", "napkelte ora"], [36, "NapkeltePerc", "napkelte perc"], [38, "DelOra", "csillagaszati del ora"], [40, "DelPerc", "csillagaszati del perc"], [42, "NapnyugtaOra", "napnyugta ora"], [44, "NapnyugtaPerc", "napnyugta perc"], [46, "NapHossz", "a nappal hossza [perc]"], [48, "Tartalek48", ""], [50, "BecsMost", "becsult termeles most [W] (eg-faktorral)"], [52, "BecsMostModell", "becsult termeles most [W] (nyers modell)"], [54, "BecsString1", "1. string most [W] (nyers modell)"], [56, "BecsString2", "2. string most [W] (nyers modell)"], [58, "BecsMa", "mai osszes becsult termeles [0.01 kWh]"], [60, "BecsMaHatra", "napnyugtaig (ma) hatralevo becsles [0.01 kWh]"], [62, "BecsHolnap", "holnapi osszes becsult termeles [0.01 kWh]"], [64, "BecsKov24", "a kovetkezo 24 ora becslese [0.01 kWh]"], [66, "EgFaktor", "eg-faktor x100 (100 = a modell pontos)"], [68, "EgFaktorOK", "1 = az eg-faktor ervenyes es be van kapcsolva"], [70, "Veszteseg", "pillanatnyi modell-veszteseg % (homerseklet + rendszer)"], [72, "Tartalek72", ""], [74, "Tartalek74", ""], [76, "Tartalek76", ""], [78, "Tartalek78", ""]], "ora": [[0, "Ora", "az ora kezdete (helyi ora)"], [2, "Hom", "homerseklet [0.1 C]"], [4, "Felho", "felhozet [%]"], [6, "CsapEsely", "csapadek eselye [%]"], [8, "Eso", "csapadek mennyisege [0.1 mm]"], [10, "DNI", "direkt besugarzas [W/m2] (az ora atlaga)"], [12, "DHI", "szort besugarzas [W/m2] (az ora atlaga)"], [14, "NapMag", "napmagassag az ora kozepen [0.1 fok]"], [16, "BecsWh", "becsult termeles az orara [Wh] (eg-faktorral)"]], "oraDb": 24, "kezdet": 80, "mezo": 9, "irasS": 10, "fw": "LeventePV 0.1.0", "hossz": 512};
+// DEMO: a /api/* hivasokat itt, a bongeszoben valaszoljuk meg hamis (de hiheto) adatokkal.
+// A napallas valodi (Csikszereda), az idojaras es a mert termeles kitalalt.
+(function(){
+const LAT=46.358, LON=25.805, R=Math.PI/180;
+const cfg={lat:LAT,lon:LON,s7ip:'192.168.0.10',rack:0,slot:2,s7en:1,elodb:10,eloofs:0,elotip:0,expdb:30,expen:1,
+  invmax:10000,veszt:10,homk:0.4,horiz:8,skyen:1,
+  str:[{en:1,wp:5000,tilt:35,azim:180},{en:1,wp:4000,tilt:30,azim:250}]};
+// ejszaka a demo ures lenne: ilyenkor az orat a mai 11:00 korulre toljuk (a tobbi kod is ezt latja)
+{const RD=Date, v=new RD(), o=v.getHours()+v.getMinutes()/60;
+  if(o<8.5||o>16.5){const c=new RD(v);c.setHours(11,0,0,0);const OFF=c-v;
+    class DD extends RD{constructor(...a){a.length?super(...a):super(RD.now()+OFF)}static now(){return RD.now()+OFF}}
+    window.Date=DD;window.DEMO_IDOELTOLAS=true}}
+const t0=Date.now();let s7ok=0,expOk=0;
+
+// napallas (NOAA kozelites) egy adott idopontra
+function nap(d){
+  const jd=d/86400000+2440587.5, n=jd-2451545, L=(280.46+0.9856474*n)%360, g=(357.528+0.9856003*n)*R;
+  const lam=(L+1.915*Math.sin(g)+0.02*Math.sin(2*g))*R, eps=(23.439-4e-7*n)*R;
+  const dec=Math.asin(Math.sin(eps)*Math.sin(lam)), ra=Math.atan2(Math.cos(eps)*Math.sin(lam),Math.cos(lam));
+  const gmst=(18.697374558+24.06570982441908*n)%24, ha=((gmst*15+LON)*R-ra);
+  const el=Math.asin(Math.sin(LAT*R)*Math.sin(dec)+Math.cos(LAT*R)*Math.cos(dec)*Math.cos(ha));
+  let az=Math.atan2(Math.sin(ha),Math.cos(ha)*Math.sin(LAT*R)-Math.tan(dec)*Math.cos(LAT*R))/R+180;
+  return {el:el/R,az:(az+360)%360};
+}
+const hhmm=d=>String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+const rnd=i=>{const x=Math.sin(i*12.9898+3.1)*43758.5453;return x-Math.floor(x)};
+
+// kitalalt idojaras az i. orara (ma 00:00-tol): ma reszben felhos, holnap esos delutan, aztan derul
+const NAPALAP=[30,65,45,15], NAPHOM=[0,-2,-1,2];
+function ido(i,t){const nap=Math.min(3,Math.floor(i/24));
+  const felho=Math.round(Math.max(0,Math.min(100,NAPALAP[nap]+35*Math.sin(i/4.5)+20*(rnd(i)-.5))));
+  const esely=Math.round(Math.max(0,felho-45)*1.4), eso=esely>40?Math.round(rnd(i+99)*esely/12)/10:0;
+  const hom=Math.round((9+7*Math.sin((t.getHours()-9)*Math.PI/12)+NAPHOM[nap]+rnd(i+7))*10)/10;
+  return {felho,esely,eso,hom}}
+function wmoKod(o){if(o.eso>=1.5)return 63;if(o.eso>0)return o.esely>70?61:80;if(o.felho>85)return 3;if(o.felho>55)return 2;if(o.felho>20)return 1;return 0}
+const lekTs=Math.floor(Date.now()/1000)-17*60;
+function idojaras(){
+  const d0=new Date();d0.setHours(0,0,0,0);
+  const r={ok:true,lekerve:lekTs,hiba:0,t0:Math.floor(d0/1000),hom:[],val:[],mm:[],felho:[],kod:[],nap:[]};
+  for(let i=0;i<96;i++){const o=ido(i,new Date(d0.getTime()+i*3600000));
+    r.hom.push(Math.round(o.hom*10));r.val.push(o.esely);r.mm.push(Math.round(o.eso*10));r.felho.push(o.felho);r.kod.push(wmoKod(o))}
+  for(let n=0;n<4;n++){const s=r.hom.slice(n*24,n*24+24),mm=r.mm.slice(n*24,n*24+24).reduce((a,b)=>a+b,0),
+      kod=Math.max(...r.kod.slice(n*24+8,n*24+20).map(k=>k===80||k===61||k===63?k:k>3?0:k));
+    r.nap.push([r.t0+n*86400,mm>=10?63:mm>0?80:kod,Math.max(...s),Math.min(...s),mm,Math.max(...r.val.slice(n*24,n*24+24))])}
+  return r}
+
+function szamol(){
+  const most=new Date(), d0=new Date(most);d0.setHours(0,0,0,0);
+  const h=[];let ma=0,hatra=0,holnap=0;
+  for(let i=0;i<48;i++){
+    const t=new Date(d0.getTime()+i*3600000), np=nap(t.getTime()+1800000), se=Math.max(0,Math.sin(np.el*R));
+    const {felho,esely,eso,hom}=ido(i,t);
+    const am=se>0.02?1/se:0, dniCs=se>0.02?1100*Math.pow(0.7,Math.pow(am,0.678)):0;
+    const dni=Math.round(dniCs*(1-0.85*Math.pow(felho/100,1.6))), dhi=Math.round(se>0.02?(60+170*felho/100)*Math.sqrt(se):0);
+    let ws=cfg.str.map(s=>{if(!s.en||se<=0.02)return 0;
+      const b=s.tilt*R, ci=Math.max(0,se*Math.cos(b)+Math.cos(np.el*R)*Math.sin(b)*Math.cos((np.az-s.azim)*R));
+      const hor=np.el<cfg.horiz?Math.pow(Math.max(0,np.el)/cfg.horiz,2):1;
+      const poa=dni*ci*hor+dhi*(1+Math.cos(b))/2;
+      return s.wp*poa/1000*(1-cfg.homk/100*Math.max(0,hom+poa/800*20-25))*(1-cfg.veszt/100)});
+    const ossz=ws[0]+ws[1];if(ossz>cfg.invmax)ws=ws.map(w=>w*cfg.invmax/ossz);
+    const wh=Math.round(ws[0]+ws[1]);
+    h.push([t.getHours(),i<24?0:1,hom,felho,esely,eso,dni,dhi,Math.round(np.el*10),Math.round(wh*1.06),wh,Math.round(ws[0]),Math.round(ws[1])]);
+    if(i<24){ma+=wh;if(i>=most.getHours())hatra+=i===most.getHours()?wh*(1-most.getMinutes()/60):wh}else holnap+=wh;
+  }
+  const mi=most.getHours(), cur=h[mi];
+  // kelte / nyugta: percenkenti kereses
+  let kel=null,ny=null,del=null,maxEl=-90;
+  for(let m=0;m<1440;m++){const e=nap(d0.getTime()+m*60000).el;const t=new Date(d0.getTime()+m*60000);
+    if(kel==null&&e>-0.833)kel=t;if(kel&&e>-0.833)ny=t;if(e>maxEl){maxEl=e;del=t}}
+  const np=nap(most.getTime());
+  const oraBecs=[],oraTeny=[],oraTenyOk=[];
+  for(let i=0;i<24;i++){const b=h[i][10];oraBecs.push(i<=mi?b:0);
+    const t=i<mi?Math.round(b*(0.95+0.2*rnd(i+50))):i===mi?Math.round(b*1.06*most.getMinutes()/60):0;
+    oraTeny.push(t);oraTenyOk.push(i<mi)}
+  const eloW=cur[10]>0?Math.round(cur[10]*1.06*(0.97+0.06*Math.random())):0;
+  s7ok+=3;expOk+=1;
+  const up=Math.round((Date.now()-t0)/1000)+86400*3+4200;
+  return {fw:'LeventePV 0.1.0 (DEMO)',ido:most.getFullYear()+'-'+String(most.getMonth()+1).padStart(2,'0')+'-'+String(most.getDate()).padStart(2,'0')+' '+most.toTimeString().slice(0,8),
+    idoOk:true,uptime:up,heap:148200+Math.round(Math.random()*3000),heapMin:121400,
+    net:'STA Levente-Otthon 192.168.0.50 (fix, -61 dBm)',sta_ok:true,sta_ip:'192.168.0.50',sta_ssid:'Levente-Otthon',
+    w_ssid:'Levente-Otthon',w_ip:'192.168.0.50',w_mask:'255.255.255.0',w_gw:'192.168.0.1',cfg,
+    nap:{ok:true,elev:np.el,azim:np.az,kel:kel?hhmm(kel):'--:--',del:hhmm(del),nyug:ny?hhmm(ny):'--:--',hossz:kel&&ny?Math.round((ny-kel)/60000):0},
+    wx:{ok:true,hiba:0,kor:Math.round(Date.now()/60000-lekTs/60),lek:lekTs,h,most:mi},
+    sol:{ok:true,ma:Math.round(ma),hatra:Math.round(hatra),holnap:Math.round(holnap),kov24:h.slice(mi,mi+24).reduce((a,r)=>a+r[10],0),
+      most:Math.round(cur[10]*1.06),mostNyers:cur[10],s1:cur[11],s2:cur[12],veszt:cfg.veszt+3,sky:cfg.skyen?1.06:1,skyNyers:1.08,skyOk:!!cfg.skyen&&cur[10]>=150,skyMinta:1200,
+      oraBecs,oraTeny,oraTenyOk},
+    s7:{kapcs:!!cfg.s7en,pdu:240,ok:s7ok,hiba:2,utHiba:'',eloW,eloOk:!!cfg.s7en&&eloW>0,expOk:cfg.expen?expOk:0,expHiba:0,expUtHiba:'',
+      expKor:cfg.expen?Math.round(Math.random()*9):-1,eletjel:expOk,expHossz:512}};
+}
+
+const valasz=(body,typ,st)=>new Response(typeof body==='string'?body:JSON.stringify(body),{status:st||200,headers:{'Content-Type':typ||'application/json'}});
+const eredeti=window.fetch.bind(window);
+window.fetch=async function(u,o){
+  const url=new URL(typeof u==='string'?u:u.url,location.href), p=url.pathname.replace(/.*\/api\//,'/api/'), q=url.searchParams;
+  if(!/\/api\//.test(url.pathname))return eredeti(u,o);
+  await new Promise(r=>setTimeout(r,120));
+  if(p==='/api/status')return valasz(szamol());
+  if(p==='/api/idojaras')return valasz(idojaras());
+  if(p==='/api/set'){
+    for(const [k,v] of q){const m=k.match(/^s(\d)(en|wp|tilt|azim)$/);
+      if(m)cfg.str[m[1]-1][m[2]]=+v;else if(k==='s7ip')cfg[k]=v;else if(k in cfg)cfg[k]=+v}
+    return valasz('mentve (demo - csak ebben a bongeszoben)','text/plain')}
+  if(p==='/api/wifiscan')return valasz(q.has('start')?{allapot:'fut'}:{allapot:'kesz',lista:[['Levente-Otthon',-61,6,1],['DIGI-24G-7781',-74,1,1],['levente',-30,6,0],['Vodafone-Guest',-85,11,0]]});
+  return valasz('demo: ez a parancs itt nem csinal semmit (a panelen: '+p+')','text/plain');
+};
+// AWL: az awl.cpp awlGeneral() pontos masa (CRLF, ugyanaz az oszlopozas), a beallitott DB-szammal
+function awlGeneral(){
+  const T=AWL_T, db=cfg.expdb, CR='\r\n';
+  const sor=(ofs,nev,megj)=>'   '+nev.padEnd(16)+' : INT  := 0;   // DBW'+String(ofs).padEnd(4)+' '+megj+CR;
+  let s='DATA_BLOCK DB'+db+CR+'TITLE = LeventePV export'+CR+'// '+T.fw+' - idojaras, napallas, becsult napenergia.'+CR+
+    '// A gateway irja (ha a weben engedelyezve van), '+T.irasS+' s-onkent.'+CR+
+    '// Minden mezo INT. Az orankenti blokkok (Hxx_) a MOSTANI oratol indulnak:'+CR+
+    '// H00 = a mostani ora, H01 = a kovetkezo ... H23. Hossz: '+T.hossz+' bajt.'+CR+'VERSION : 0.1'+CR+CR+'  STRUCT'+CR;
+  for(const [o,n,m] of T.fej)s+=sor(o,n,m);
+  for(let k=0;k<T.oraDb;k++){const p='H'+String(k).padStart(2,'0')+'_';
+    for(const [o,n,m] of T.ora)s+=sor(T.kezdet+k*T.mezo*2+o,p+n,k===0?m:'')}
+  return s+'  END_STRUCT ;'+CR+'BEGIN'+CR+'END_DATA_BLOCK'+CR}
+document.addEventListener('DOMContentLoaded',()=>{
+  const a=document.getElementById('awlLink');if(!a)return;
+  a.onclick=async e=>{e.preventDefault();
+    const nev='DB'+cfg.expdb+'_LeventePV.AWL';
+    // a claude.ai artifact-nezoben csak a "downloads" kepesseggel lehet menteni, es ott az .AWL nem engedett
+    // kiterjesztes -> .AWL.txt; sima bongeszoben (GitHub Pages) a szokasos letoltes
+    const dl=window.claude&&window.claude.use?await window.claude.use('downloads').catch(()=>null):null;
+    if(dl){try{await dl.save({filename:nev+'.txt',data:awlGeneral()});
+        alert('Mentve: '+nev+'.txt – a végéről a .txt-t töröld, és úgy töltsd be a STEP 7-be (forrásként).')}
+      catch(x){if(x&&x.code!=='declined')alert('A letöltés itt nem sikerült ('+(x&&x.code)+').')}
+      return}
+    const url=URL.createObjectURL(new Blob([awlGeneral()],{type:'text/plain'})), l=document.createElement('a');
+    l.href=url;l.download=nev;document.body.appendChild(l);l.click();l.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),5000)};
+});
+})();
+</script>
+<div style="position:fixed;right:10px;bottom:10px;z-index:99;padding:5px 11px;border-radius:999px;background:#f97316;color:#111;font:800 12px Arial;box-shadow:0 6px 18px rgba(0,0,0,.4)">DEMÓ · hamis adatok<span id="demoIdo"></span></div><script>if(window.DEMO_IDOELTOLAS)document.getElementById("demoIdo").textContent=" · az óra nappalra tolva"</script>
+<script>
+const $=id=>document.getElementById(id), v=id=>$(id).value;
+let S=null, cfgBetoltve=false, wifiNyitva=false;
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+function menuValt(){document.querySelector('.sidebar').classList.toggle('nyitva')}
+function showPage(id,btn){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.remove('active'));
+  $('page-'+id).classList.add('active');btn.classList.add('active');
+  document.querySelector('.sidebar').classList.remove('nyitva');window.scrollTo(0,0);rajzol();rajzolIdo();
+}
+async function act(u){try{const r=await fetch(u,{cache:'no-store'});const t=await r.text();if(!r.ok)alert(t);else frissit();return t}catch(e){alert(e)}}
+function ment(kulcsok){
+  const q=kulcsok.map(k=>{const e=$('c_'+k);return k+'='+encodeURIComponent(e.type==='checkbox'?(e.checked?1:0):e.value)}).join('&');
+  act('/api/set?'+q).then(t=>{if(t)uzen('✓ '+t)});
+}
+function uzen(sz){const e=$('toast');e.textContent=sz;e.style.display='block';clearTimeout(e._t);e._t=setTimeout(()=>e.style.display='none',2500)}
+function gps(){if(!navigator.geolocation){alert('A böngésző nem ad helyet (csak https-en vagy localhoston).');return}
+  navigator.geolocation.getCurrentPosition(p=>{$('c_lat').value=p.coords.latitude.toFixed(4);$('c_lon').value=p.coords.longitude.toFixed(4)},e=>alert('Nincs hely: '+e.message))}
+function wifi(){if(confirm('WiFi mentése és újraindítás?'))act('/api/wifi?ssid='+encodeURIComponent(v('w_ssid'))+'&pass='+encodeURIComponent(v('w_pass'))
+  +'&ip='+encodeURIComponent(v('w_ip'))+'&mask='+encodeURIComponent(v('w_mask'))+'&gw='+encodeURIComponent(v('w_gw')))}
+let wsT=null;
+async function wscan(){
+  $('wsMsg').textContent='keresés…';$('wsLista').innerHTML='';
+  try{await fetch('/api/wifiscan?start=1')}catch(e){}
+  let n=0;clearInterval(wsT);
+  wsT=setInterval(async()=>{
+    if(++n>25){clearInterval(wsT);$('wsMsg').textContent='nem jött eredmény – próbáld újra';return}
+    try{const j=await (await fetch('/api/wifiscan')).json();
+      if(j.allapot!=='kesz')return;
+      clearInterval(wsT);$('wsMsg').textContent=j.lista.length+' hálózat';
+      const jel=r=>r>=-60?'erős':r>=-72?'közepes':r>=-82?'gyenge':'nagyon gyenge';
+      $('wsLista').innerHTML='<table><tr><th>SSID</th><th class=r>jel</th><th class=r>csat.</th><th></th></tr>'+
+        j.lista.map(x=>'<tr style="cursor:pointer" data-s="'+esc(x[0])+'" onclick="$(\'w_ssid\').value=this.dataset.s;$(\'w_pass\').focus()"><td>'+esc(x[0])+'</td><td class=r>'+x[1]+' dBm <span class=mut>('+jel(x[1])+')</span></td><td class=r>'+x[2]+'</td><td>'+(x[3]?'🔒':'nyílt')+'</td></tr>').join('')+'</table>';
+    }catch(e){}
+  },1200);
+}
+const W=w=>w==null?'--':(w>=1000?(w/1000).toFixed(2)+' kW':Math.round(w)+' W');
+const K=wh=>wh==null?'--':(wh/1000).toFixed(1)+' kWh';
+const kv=(k,v)=>'<span class=mut>'+k+'</span><b>'+v+'</b>';
+
+// --- egyszeru SVG grafikon: sorozatok [{d:[...], c:'#..', tip:'vonal'|'oszlop', y2:bool}] ---
+function grafikon(el,cimkek,sorok,opt){
+  opt=opt||{};const Wd=900,H=opt.h||240,L=40,R=opt.y2?40:12,T=10,B=28,pw=Wd-L-R,ph=H-T-B,n=cimkek.length;if(!n){$(el).innerHTML='<p class=mut>nincs adat</p>';return}
+  const max1=Math.max(1,...sorok.filter(s=>!s.y2).flatMap(s=>s.d)), min1=Math.min(0,...sorok.filter(s=>!s.y2).flatMap(s=>s.d));
+  const max2=Math.max(1,...sorok.filter(s=>s.y2).flatMap(s=>s.d).concat([1]));
+  const x=i=>L+pw*(i+0.5)/n, y=(val,s)=>s.y2?T+ph*(1-val/(opt.y2max||max2)):T+ph*(1-(val-min1)/(max1-min1||1));
+  let g='<svg class=chart viewBox="0 0 '+Wd+' '+H+'">';
+  for(let k=0;k<=4;k++){const yy=T+ph*k/4;g+='<line x1='+L+' x2='+(Wd-R)+' y1='+yy+' y2='+yy+' stroke="#232f47"/>';
+    g+='<text x='+(L-6)+' y='+(yy+4)+' text-anchor=end>'+Math.round(max1-(max1-min1)*k/4)+'</text>';
+    if(opt.y2)g+='<text x='+(Wd-R+6)+' y='+(yy+4)+'>'+Math.round((opt.y2max||max2)*(1-k/4))+'</text>'}
+  const lep=Math.max(1,Math.ceil(n/16));
+  cimkek.forEach((c,i)=>{if(i%lep===0)g+='<text x='+x(i)+' y='+(H-8)+' text-anchor=middle>'+c+'</text>'});
+  if(opt.most!=null&&opt.most>=0&&opt.most<n)g+='<line x1='+x(opt.most)+' x2='+x(opt.most)+' y1='+T+' y2='+(T+ph)+' stroke="#06b6d4" stroke-dasharray="4 4"/>';
+  const oszl=sorok.filter(s=>s.tip==='oszlop'),bw=pw/n*0.8/Math.max(1,oszl.length);
+  oszl.forEach((s,j)=>s.d.forEach((val,i)=>{if(val==null)return;const y0=y(0,s),y1=y(val,s);
+    g+='<rect x='+(x(i)-pw/n*0.4+j*bw)+' y='+Math.min(y0,y1)+' width='+bw+' height='+Math.abs(y0-y1)+' fill="'+s.c+'" rx=2><title>'+cimkek[i]+': '+val+'</title></rect>'}));
+  sorok.filter(s=>s.tip!=='oszlop').forEach(s=>{g+='<polyline fill=none stroke="'+s.c+'" stroke-width=2.5 points="'+s.d.map((val,i)=>x(i)+','+y(val,s)).join(' ')+'"/>'});
+  $(el).innerHTML=g+'</svg>';
+}
+
+function napIv(n){
+  if(!n||!n.ok){$('napIv').innerHTML='<p class=mut>nincs ido</p>';return}
+  const p=s=>{const a=s.split(':');return +a[0]+a[1]/60}, kel=p(n.kel), ny=p(n.nyug);
+  const d=new Date(), most=d.getHours()+d.getMinutes()/60;
+  let f=(most-kel)/(ny-kel);const nappal=f>=0&&f<=1;f=Math.max(0,Math.min(1,f));
+  const cx=150,cy=140,r=115,a=Math.PI*(1-f),sx=cx+r*Math.cos(a),sy=cy-r*Math.sin(a);
+  $('napIv').innerHTML='<svg class=chart viewBox="0 0 300 175"><path d="M35 140 A115 115 0 0 1 265 140" fill=none stroke="#26344f" stroke-width=8 stroke-linecap="round" />'+
+    '<path d="M35 140 A115 115 0 0 1 '+sx.toFixed(1)+' '+sy.toFixed(1)+'" fill=none stroke="#facc15" stroke-width=8 stroke-linecap="round" opacity=".8" />'+
+    '<circle cx='+sx.toFixed(1)+' cy='+sy.toFixed(1)+' r=11 fill="'+(nappal?'#facc15':'#475569')+'"/>'+
+    '<text x=35 y=165 text-anchor=middle>'+n.kel+'</text><text x=265 y=165 text-anchor=middle>'+n.nyug+'</text>'+
+    '<text x=150 y=110 text-anchor=middle style="font-size:22px;fill:#e9eef7;font-weight:900">'+n.elev.toFixed(1)+'°</text>'+
+    '<text x=150 y=130 text-anchor=middle>napmagasság</text></svg>';
+}
+
+function rajzol(){
+  const s=S;if(!s)return;const h=s.wx.h||[],mi=s.wx.most;
+  const ora=h.map(r=>(r[1]?'h':'')+String(r[0]).padStart(2,'0'));
+  // attekinto: ma + holnap becsult, ma mert
+  const ma=h.map((r,i)=>r[1]===0?r[0]:null), teny=h.map(r=>r[1]===0?s.sol.oraTeny[r[0]]:null);
+  if($('page-att').classList.contains('active'))grafikon('aChart',ora,[{d:h.map(r=>r[9]),c:'#facc15',tip:'oszlop'},{d:teny.map(x=>x==null?0:x),c:'#22c55e',tip:'oszlop'}],{most:mi});
+  if($('page-wx').classList.contains('active')){
+    grafikon('wxChart2',ora,[{d:h.map(r=>r[6]),c:'#facc15'},{d:h.map(r=>r[7]),c:'#a78bfa'}],{most:mi});
+  }
+  if($('page-nap').classList.contains('active')){
+    const mai=h.filter(r=>r[1]===0);grafikon('napChart',mai.map(r=>String(r[0]).padStart(2,'0')),[{d:mai.map(r=>r[8]/10),c:'#facc15'}],{most:mi<24?mi:null,h:200});
+    napIv(s.nap);
+  }
+  if($('page-sol').classList.contains('active')){
+    const o=[...Array(24).keys()];
+    const becs=o.map(i=>{const r=h.find(x=>x[1]===0&&x[0]===i);return r?r[9]:0});
+    grafikon('solChart',o.map(i=>String(i).padStart(2,'0')),[{d:becs,c:'#facc15',tip:'oszlop'},{d:s.sol.oraTeny,c:'#22c55e',tip:'oszlop'}],{most:new Date().getHours(),h:220});
+    $('solTab').innerHTML='<tr><th>óra</th><th class=r>becsült most</th><th class=r>becsült az órában</th><th class=r>mért</th><th class=r>eltérés</th></tr>'+
+      o.map(i=>{const t=s.sol.oraTeny[i],b=s.sol.oraBecs[i],okk=s.sol.oraTenyOk[i];
+        const elt=(okk&&b>50)?Math.round((t/b-1)*100):null;
+        return '<tr'+(i===new Date().getHours()?' class=most':'')+'><td>'+String(i).padStart(2,'0')+':00</td><td class=r>'+becs[i]+' Wh</td><td class=r>'+b+' Wh</td><td class=r>'+(t||okk?t+' Wh'+(okk?'':' <span class=mut>(rész)</span>'):'–')+'</td><td class=r>'+(elt==null?'':(elt>0?'+':'')+elt+' %')+'</td></tr>'}).join('');
+  }
+}
+
+// ---------------------------------------------------------------- idojaras (a Kolozsvar-panel nezete)
+const NAPOK=['Hétfő','Kedd','Szerda','Csütörtök','Péntek','Szombat','Vasárnap'];
+function fok(x,d=1){return x==null?'--':x.toFixed(d).replace('.',',')}
+const ket=n=>String(n).padStart(2,'0');
+function mikor(t){if(!t)return '--';const d=new Date(t*1000),hm=ket(d.getHours())+':'+ket(d.getMinutes());
+  return d.toDateString()===new Date().toDateString()?hm:(d.getMonth()+1)+'.'+d.getDate()+'. '+hm}
+// WMO idojaraskod -> ikon, szoveg
+function wmo(k,ej){
+  if(k<=1)return[ej?'🌙':k?'🌤️':'☀️',k?'Többnyire derült':'Derült'];if(k===2)return[ej?'☁️':'⛅','Részben felhős'];if(k===3)return['☁️','Borult'];
+  if(k===45||k===48)return['🌫️','Köd'];if(k>=51&&k<=55)return['🌦️','Szitálás'];if(k===56||k===57||k===66||k===67)return['🧊','Ónos eső'];
+  if(k>=61&&k<=65)return['🌧️',k===61?'Gyenge eső':k===63?'Eső':'Erős eső'];if(k>=71&&k<=77)return['🌨️','Havazás'];
+  if(k>=80&&k<=82)return['🌦️','Zápor'];if(k===85||k===86)return['🌨️','Hózápor'];if(k>=95)return['⛈️',k>95?'Zivatar jégesővel':'Zivatar'];return['❔','']}
+let IJ=null, IT=0, iNap=0, iNapKezi=false, ILek=null;   // alapbol a mai nap, 19 ora utan a holnapi (amig nem valasztanak)
+async function idoTolt(kell){
+  if(IJ&&!kell&&Date.now()-IT<600000)return;
+  try{IJ=await (await fetch('/api/idojaras',{cache:'no-store'})).json();IT=Date.now();rajzolIdo();attIdo()}catch(e){}
+}
+// az idopont orajanak indexe az IJ-ben (null, ha kivul esik)
+function iIdx(t){if(!IJ||!IJ.ok)return null;const i=Math.floor((t/1000-IJ.t0)/3600);return i>=0&&i<IJ.hom.length?i:null}
+function attIdo(){const i=iIdx(Date.now()),e=$('aEg');if(!e)return;
+  if(i==null){e.innerHTML='';return}const h=new Date().getHours(),[ik,sz]=wmo(IJ.kod[i],h<6||h>=20);
+  e.innerHTML='<span style="font-size:30px;vertical-align:-5px">'+ik+'</span> <b>'+sz+'</b>';
+  const k=$('iKint');if(k)k.textContent='most '+fok(IJ.hom[i]/10)+'°'}
+function rajzolIdo(){
+  const j=IJ;if(!j||!$('page-wx').classList.contains('active'))return;
+  if(!iNapKezi)iNap=new Date().getHours()>=19?1:0;
+  if(!j.ok){$('iNapok').innerHTML='';$('iChart').innerHTML='<p class=mut>Még nincs előrejelzés'+(j.hiba?' (hiba '+esc(j.hiba)+')':'')+' – internet kell hozzá.</p>';$('iFris').textContent='';return}
+  const nevek=['Ma','Holnap','Holnapután'];
+  if(iNap>=j.nap.length)iNap=0;
+  $('iNapok').innerHTML=j.nap.map((d,i)=>{const [ik]=wmo(d[1]);const dt=new Date(d[0]*1000);
+    return '<button class="inap'+(i===iNap?' on':'')+'" onclick="iNap='+i+';iNapKezi=true;rajzolIdo()"><div class=n>'+(nevek[i]||NAPOK[(dt.getDay()+6)%7])+'</div><div class=ik>'+ik+'</div>'+
+      '<div class=t>'+Math.round(d[2]/10)+'° <span>'+Math.round(d[3]/10)+'°</span></div><div class=c>💧'+d[5]+'%'+(d[4]>=1?' · '+fok(d[4]/10)+' mm':'')+'</div></button>'}).join('');
+  // a kivalasztott nap oras grafikonja
+  const t0=j.nap[iNap][0], i0=Math.round((t0-j.t0)/3600), n=Math.min(24,j.hom.length-i0);
+  if(n<2){$('iChart').innerHTML='';return}
+  const W=Math.max(280,$('iChart').clientWidth||340),H=190,pl=30,pr=6,pt=26,pb=20;
+  let lo=99,hi=-99;for(let k=0;k<n;k++){const x=j.hom[i0+k]/10;lo=Math.min(lo,x);hi=Math.max(hi,x)}
+  lo=Math.floor(lo-1);hi=Math.ceil(hi+1);
+  const bw=(W-pl-pr)/24,X=h=>pl+h*bw,Y=x=>pt+(hi-x)/(hi-lo)*(H-pt-pb),YB=p=>H-pb-p/100*(H-pt-pb)*.55;
+  let s='';
+  const lp=(hi-lo)>12?4:(hi-lo)>6?2:1;
+  for(let x=lo;x<=hi;x+=lp)s+='<line x1="'+pl+'" x2="'+(W-pr)+'" y1="'+Y(x)+'" y2="'+Y(x)+'" stroke="#1d2940"/><text x="'+(pl-4)+'" y="'+(Y(x)+4)+'" text-anchor="end">'+x+'°</text>';
+  // felhozet: halvany szurke hatter-terulet, 0..100 % a teljes rajzmagassagon; az oszlopok es a gorbe ELE kerul
+  {const YF=p=>H-pb-Math.max(0,Math.min(100,p||0))/100*(H-pt-pb);
+    let fd='M'+X(0).toFixed(1)+' '+(H-pb);
+    for(let k=0;k<n;k++){const y=YF(j.felho[i0+k]).toFixed(1);
+      fd+=' L'+(k?(X(k)+bw/2):X(0)).toFixed(1)+' '+y;if(k===n-1)fd+=' L'+X(n).toFixed(1)+' '+y}
+    fd+=' L'+X(n).toFixed(1)+' '+(H-pb)+' Z';
+    s+='<path d="'+fd+'" fill="#94a3b8" fill-opacity="0.20" stroke="#94a3b8" stroke-opacity="0.35" stroke-width="1"/>'}
+  for(let k=0;k<n;k++){const p=j.val[i0+k],mm=j.mm[i0+k]/10;
+    if(p>0)s+='<rect x="'+(X(k)+1).toFixed(1)+'" y="'+YB(p).toFixed(1)+'" width="'+(bw-2).toFixed(1)+'" height="'+(H-pb-YB(p)).toFixed(1)+'" rx="2" fill="#60a5fa" opacity="'+(mm>=0.1?.75:.35)+'"/>';
+    if(k%3===0){s+='<text x="'+(X(k)+bw/2)+'" y="'+(H-5)+'" text-anchor="middle">'+ket(k)+'</text>';
+      const h=(new Date((t0+k*3600)*1000)).getHours();s+='<text x="'+(X(k)+bw/2)+'" y="16" text-anchor="middle" style="font-size:15px">'+wmo(j.kod[i0+k],h<6||h>=20)[0]+'</text>'}}
+  let d='';for(let k=0;k<n;k++)d+=(k?'L':'M')+(X(k)+bw/2).toFixed(1)+' '+Y(j.hom[i0+k]/10).toFixed(1);
+  s+='<path d="'+d+'" fill="none" stroke="#fb923c" stroke-width="2.4" stroke-linejoin="round"/>';
+  for(let k=1;k<n;k+=3){const x=j.hom[i0+k]/10;s+='<text x="'+(X(k)+bw/2)+'" y="'+(Y(x)-7)+'" text-anchor="middle" style="fill:#fdba74;font-weight:700">'+Math.round(x)+'°</text>'}
+  if(iNap===0){const most=(Date.now()/1000-t0)/3600;if(most>=0&&most<24)s+='<line x1="'+X(most)+'" x2="'+X(most)+'" y1="'+pt+'" y2="'+(H-pb)+'" stroke="#fff" opacity=".5"/>'}
+  s+='<line id="iKurz" x1="0" x2="0" y1="'+pt+'" y2="'+(H-pb)+'" stroke="#e9eef7" opacity="0"/>';
+  $('iChart').innerHTML='<svg class="ichart" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">'+s+'</svg>';
+  const svg=$('iChart').firstChild;
+  const mut=e=>{const b=svg.getBoundingClientRect(),x=(e.clientX-b.left)*W/b.width,k=Math.max(0,Math.min(n-1,Math.floor((x-pl)/bw))),q=i0+k;
+    const c=$('iKurz');c.setAttribute('x1',X(k)+bw/2);c.setAttribute('x2',X(k)+bw/2);c.setAttribute('opacity','.5');
+    const [ik,sz]=wmo(j.kod[q]);$('iInfo').innerHTML='<b>'+ket(k)+':00</b> · '+ik+' '+sz+' · <b>'+fok(j.hom[q]/10)+'°</b> · 💧 '+j.val[q]+'%'+(j.mm[q]?' · '+fok(j.mm[q]/10)+' mm':'')+' · ☁️ '+j.felho[q]+'%'};
+  svg.addEventListener('pointermove',mut);svg.addEventListener('pointerdown',mut);
+  const dn=j.nap[iNap],[ik2,sz2]=wmo(dn[1]);
+  $('iInfo').innerHTML=ik2+' '+sz2+' · '+fok(dn[3]/10)+'° … '+fok(dn[2]/10)+'° · eső esélye '+dn[5]+'%'+(dn[4]?' · '+fok(dn[4]/10)+' mm':'');
+  $('iFris').textContent='Frissítve: '+mikor(j.lekerve)+' · Open-Meteo · a kék oszlop az eső esélye (sötétebb: várható csapadék) · a szürke háttér a felhőzet (0–100 %)';
+  attIdo();
+}
+addEventListener('resize',()=>{clearTimeout(window._rz);window._rz=setTimeout(rajzolIdo,200)});
+
+async function frissit(){
+  try{
+    const s=S=await (await fetch('/api/status',{cache:'no-store'})).json();
+    $('onDot').classList.remove('offline');
+ {const e=$('wAll');if(e){
+   const fix=s.w_ip?'fix':'DHCP';
+   if(s.sta_ok){e.innerHTML='<span class=okk style="font-size:18px;font-weight:900">✓ Csatlakozva: '+esc(s.sta_ssid)+'</span><br>'+
+     'IP-cím: <b style="font-size:26px;letter-spacing:-.02em">'+esc(s.sta_ip)+'</b> <span class=mut>('+fix+')</span><br>'+
+     '<span class=mut>Ha a telefon is ezen a WiFi-n van: </span><a href="http://'+esc(s.sta_ip)+'/">http://'+esc(s.sta_ip)+'/</a>'+
+     '<br><span class=mut>A saját '+esc('levente')+' hálózat az indulás után 10 perccel kikapcsol.</span>';$('wAllCard').style.borderColor='#16a34a'}
+   else if(s.w_ssid){e.innerHTML='<span class=rossz style="font-size:18px;font-weight:900">✗ Nincs csatlakozva: '+esc(s.w_ssid)+'</span><br>'+
+     '<span class=mut>Rossz jelszó, vagy a hálózat itt nem érhető el. Ellenőrizd lent, és mentsd újra.</span>';$('wAllCard').style.borderColor='#ef4444'}
+   else{e.innerHTML='<span class=mut>Még nincs beállítva helyi WiFi – add meg lent.</span>';$('wAllCard').style.borderColor=''}}}
+    $('fIdo').textContent=s.ido;
+    $('fNet').textContent=s.net+' · heap '+Math.round(s.heap/1024)+'k (min '+Math.round(s.heapMin/1024)+'k) · '+s.fw;
+    if(!wifiNyitva){wifiNyitva=true;if(!/^STA [^:]*\d+\.\d+\.\d+\.\d+/.test(s.net||''))showPage('wifi',$('navWifi'))}
+    if(!cfgBetoltve){
+      const c=s.cfg;for(const k in c){const e=$('c_'+k);if(!e)continue;if(e.type==='checkbox')e.checked=!!c[k];else e.value=c[k]}
+      c.str.forEach((x,i)=>['en','wp','tilt','azim'].forEach(k=>{const e=$('c_s'+(i+1)+k);if(e.type==='checkbox')e.checked=!!x[k];else e.value=x[k]}));
+      ['ssid','ip','mask','gw'].forEach(k=>{if(s['w_'+k]!=null)$('w_'+k).value=s['w_'+k]});
+      cfgBetoltve=true;
+    }
+    const sol=s.sol,s7=s.s7,n=s.nap,h=s.wx.h||[],m=h[s.wx.most];
+    $('aElo').textContent=s7.eloOk?W(s7.eloW):'nincs adat';
+    $('aBecs').textContent=sol.ok?W(sol.most):'--';
+    $('aMa').textContent=sol.ok?K(sol.ma)+' · '+K(sol.hatra):'--';
+    $('aHolnap').textContent=sol.ok?K(sol.holnap):'--';
+    $('aWx').innerHTML=m?kv('Hőmérséklet',m[2].toFixed(1)+' °C')+kv('Felhő',m[3]+' %')+kv('Csapadék',m[4]+' % · '+m[5]+' mm')+kv('Besugárzás',m[6]+' / '+m[7]+' W/m²'):'<span class=mut>nincs időjárás-adat</span>';
+    $('aNap').innerHTML=n.ok?kv('Magasság',n.elev.toFixed(1)+'°')+kv('Azimut',n.azim.toFixed(0)+'°')+kv('Napkelte',n.kel)+kv('Napnyugta',n.nyug):'<span class=mut>nincs idő</span>';
+    const s7sz=s7.kapcs?'<span class=okk>csatlakozva</span>':(s.cfg.s7en?'<span class=rossz>nincs kapcsolat</span>':'kikapcsolva');
+    $('aS7').innerHTML=kv('Kapcsolat',s7sz)+kv('Élő adat',s7.eloOk?W(s7.eloW):'–')+kv('Export DB'+s.cfg.expdb,s.cfg.expen?(s7.expHiba&&s7.expUtHiba?'<span class=rossz>hiba</span>':'<span class=okk>ír</span>'):'kikapcsolva')+kv('Ég-faktor',sol.skyOk?sol.sky.toFixed(2):'–');
+    // idojaras
+    $('wxAll').innerHTML=s.wx.ok?(s.wx.kor<=180?'<span class=okk>friss</span>':'<span class=sarga>elavult</span>')+' ('+s.wx.kor+' perce)'+(s.wx.hiba?' · utolsó hiba: '+s.wx.hiba:''):'<span class=rossz>nincs adat</span>'+(s.wx.hiba?' (hiba '+s.wx.hiba+')':'');
+    $('wxTab').innerHTML='<tr><th>óra</th><th class=r>hőm. °C</th><th class=r>felhő %</th><th class=r>csap. esély %</th><th class=r>eső mm</th><th class=r>direkt W/m²</th><th class=r>szórt W/m²</th><th class=r>napmag. °</th><th class=r>becsült Wh</th></tr>'+
+      h.slice(Math.max(0,s.wx.most),Math.max(0,s.wx.most)+24).map((r,j)=>'<tr'+(j===0?' class=most':'')+'><td class=ma'+r[1]+'>'+(r[1]?'holnap ':'')+String(r[0]).padStart(2,'0')+':00</td><td class=r>'+r[2].toFixed(1)+'</td><td class=r>'+r[3]+'</td><td class=r>'+r[4]+'</td><td class=r>'+r[5]+'</td><td class=r>'+r[6]+'</td><td class=r>'+r[7]+'</td><td class=r>'+(r[8]/10).toFixed(1)+'</td><td class=r>'+r[9]+'</td></tr>').join('');
+    // nap
+    $('napErt').innerHTML=n.ok?kv('Magasság',n.elev.toFixed(1)+'°')+kv('Azimut',n.azim.toFixed(1)+'° (180 = dél)')+kv('Napkelte',n.kel)+kv('Dél',n.del)+kv('Napnyugta',n.nyug)+kv('Nappal hossza',Math.floor(n.hossz/60)+' ó '+(n.hossz%60)+' p'):'<span class=mut>nincs idő</span>';
+    // becsult
+    $('sMa').textContent=sol.ok?K(sol.ma):'--';$('sHatra').textContent=sol.ok?K(sol.hatra):'--';
+    $('sHolnap').textContent=sol.ok?K(sol.holnap):'--';$('sKov').textContent=sol.ok?K(sol.kov24):'--';
+    $('sMost').innerHTML=kv('Becsült (korrigált)',W(sol.most))+kv('Becsült (modell)',W(sol.mostNyers))+kv('1. string',W(sol.s1))+kv('2. string',W(sol.s2))+
+      kv('Mért (S7)',s7.eloOk?W(s7.eloW):'–')+kv('Modell-veszteség',sol.veszt+' %');
+    $('sSky').innerHTML=kv('Állapot',!s.cfg.skyen?'kikapcsolva':sol.skyOk?'<span class=okk>érvényes</span>':'<span class=mut>gyűjt / nincs élő adat</span>')+
+      kv('Ég-faktor',sol.sky.toFixed(2))+kv('Nyers (klamp előtt)',sol.skyNyers.toFixed(2))+kv('Minta',Math.round(sol.skyMinta/60)+' perc');
+    // S7
+    $('s7Elo').textContent=s7.eloOk?W(s7.eloW):'nincs adat';
+    $('s7All').innerHTML=kv('Állapot',s7sz)+kv('PDU',s7.pdu?s7.pdu+' bájt':'–')+kv('Sikeres / hibás',s7.ok+' / '+s7.hiba)+kv('Utolsó hiba',esc(s7.utHiba||'nincs'));
+    $('s7Exp').innerHTML=kv('Állapot',s.cfg.expen?'írás bekapcsolva':'kikapcsolva')+kv('Sikeres / hibás',s7.expOk+' / '+s7.expHiba)+
+      kv('Utolsó írás',s7.expKor<0?'még nem volt':s7.expKor+' s-a')+kv('Hiba',esc(s7.expUtHiba||'nincs'))+kv('Életjel',s7.eletjel)+kv('Hossz',s7.expHossz+' bájt');
+    rajzol();
+    if(s.wx.lek!==ILek){const uj=ILek!=null;ILek=s.wx.lek;idoTolt(uj||!IJ)}else idoTolt(false);
+  }catch(e){$('onDot').classList.add('offline');$('fIdo').textContent='nincs kapcsolat'}
+}
+// #oldal a cimben: kozvetlenul az az oldal nyilik (konyvjelzozheto)
+{const h0=location.hash.slice(1);if(h0&&$('page-'+h0)){wifiNyitva=true;
+  const gomb=[...document.querySelectorAll('.nav button')].find(b=>(b.getAttribute('onclick')||'').includes("'"+h0+"'"));if(gomb)showPage(h0,gomb)}}
+frissit();setInterval(frissit,5000);
+</script></body></html>
