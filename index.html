@@ -555,7 +555,7 @@ function szobaKartya(i){
   const info=[];if(r.para!=null)info.push('💧 '+r.para+'%');if(r.elem>=0)info.push((r.elem<20?'🪫 ':'🔋 ')+r.elem+'%');
   return '<div class="card szoba" style="--c:'+SZINH[i%6]+'">'+
     '<div class="sz-fej"><h3>'+esc(r.nev||'Szoba '+(i+1))+'</h3><span class="mini">'+info.join(' · ')+'</span></div>'+
-    '<div class="sz-kozep"><div class="mert"><span class="szam">'+(r.hom!=null?fok(r.hom):'--')+'</span><span class="egys">°C</span><div class="alc">most a szobában</div></div>'+
+    '<div class="sz-kozep"><div class="mert"><span class="szam">'+(r.hom!=null?fok(r.hom):'--')+'</span><span class="egys">°C</span><div class="alc">'+(r.hom!=null?'most a szobában':r.becs?'a hőmérő nem jelentkezik – a program szerint fűtünk':'a hőmérő nem jelentkezik')+'</div></div>'+
     '<div class="celblokk">'+(vak?'':'<button class="kerek" aria-label="hidegebb" onclick="lep('+i+',-0.5)">−</button>')+
     '<div class="celszam">'+fok(cel)+'°<small>kívánt</small></div>'+
     (vak?'':'<button class="kerek" aria-label="melegebb" onclick="lep('+i+',0.5)">+</button>')+'</div></div>'+
@@ -575,7 +575,7 @@ async function kiv(i,tip){
   if(t)uzen(tip==='haza'?'🏠 Komfort a következő programváltásig':'↺ Program szerint');
 }
 function rajzolMv(){
-  if(!S||!S.f.mv)return;const m=S.f.mv, t=V&&VF?V.bojler_fent:null;
+  if(!S||!S.f.mv)return;const m=S.f.mv, t=V&&VF&&V.bojler_fent!=null&&V.bojler_fent<99?V.bojler_fent:V&&V.lg_hmv_hom!=null?V.lg_hmv_hom:null;
   const [cl,nev]=m.mod==='vak'?['b-vak','🏖️ Vakáció']:m.mod==='pk'?['b-komf','☀️ Komfort']:m.mod==='pe'?['b-eco','🌙 Eco']:['b-kezi','⏱️ Nincs pontos idő'];
   const mell=m.mod==='vak'?'hazaérkezés: '+mikor(m.vege):m.mod==='pk'?(m.vege?mikor(m.vege)+'-ig':''):m.mod==='pe'?(m.vege?'Komfort: '+mikor(m.vege):''):'';
   $('mvCard').innerHTML='<div style="display:flex;align-items:center;gap:14px"><span style="font-size:34px;line-height:1">🚿</span>'+
@@ -641,6 +641,8 @@ function gorbeRajz(k){
 }
 function korIndok(k){
   if(!k)return'';
+  if(k.mod==='hideg')return '<div class="kor-ind"><span class="badge b-kezi">🧊 Most nem érdemes</span><span class="mut">a puffer és az elosztó ('+fok(k.forras)+'°) nem melegebb a szobánál ('+fok(k.szobaRef)+'°) – vár, amíg felmelegszik</span></div>';
+  if(k.kintNincs&&(k.mod==='igeny'||k.mod==='temp'))return '<div class="kor-ind"><span class="badge '+(k.mod==='igeny'?'b-komf">🔥 Fűtési igény':'b-eco">🌡️ Temperálás')+'</span><span class="mut">a kinti hőmérséklet most nem ismert – a kazánház vezérlője a saját görbéjén tartja</span></div>';
   const e=x=>(x>=0?'+':'−')+fok(Math.abs(x))+'°';
   const rajz=gorbeRajz(k), jelm='<div class="kor-ossz"><span style="color:#cbd5e1">●</span> görbe (kint '+fok(k.kint)+'° → '+fok(k.gorbe)+'°)'+
     (k.mod==='igeny'?' · <span style="color:#60a5fa">▮</span> előrejelzés '+e(k.eloT)+' · <span style="color:#fb923c">▮</span> szobák '+e(k.szobaT)+' · <span style="color:#fde047">●</span> parancsolt '+fok(k.cel)+'°':'')+'</div>';
@@ -655,14 +657,14 @@ function korKartya(tip,ikon,nev,e,v,megy,igeny,cel,szelep,k,tart){
   const dt=e!=null&&v!=null?e-v:null;
   if(cel==null&&k&&k.cel!=null)cel=k.cel;
   if(tart)k=null;
-  const tulm=tip==='padlo'&&V&&V.pf_tulm===1;
+  const tulm=tip==='padlo'&&V&&V.pf_tulm===1, erzHiba=tip==='padlo'&&V&&V.hb_pt03===1;
   const szoveg=megy==null?'':megy?'A szivattyú jár.':'A szivattyú áll.';
   let all;
   if(megy==null)all='';
   else if(megy)all='A szivattyú jár'+(igeny===1?' – a termosztát fűtést kér.':'.');
   else all=igeny===1?'A termosztát fűtést kér, de a szivattyú még áll.':'Most nem fűt.';
   return '<div class="card kor'+(megy?' fut futk':'')+'"><div class="kor-fej"><h3>'+ikon+' '+nev+'</h3>'+
-    (tulm?'<span class="badge b-buy">⚠️ Túl meleg – a keverőszelep zár</span>':megy==null?'':'<span class="badge '+(megy?'b-komf':'b-kezi')+'">'+(megy?'🔥 Fűt':'💤 Áll')+'</span>')+'</div>'+
+    (erzHiba?'<span class="badge b-buy">⚠️ Érzékelőhiba – biztonságból áll</span>':tulm?'<span class="badge b-buy">⚠️ Túl meleg – a keverőszelep zár</span>':megy==null?'':'<span class="badge '+(megy?'b-komf':'b-kezi')+'">'+(megy?'🔥 Fűt':'💤 Áll')+'</span>')+'</div>'+
     korRajz(tip,e,v,szelep)+
     '<div class="kor-sor"><div><span>Előremenő</span><b>'+fok(e)+'<small>°C</small></b></div><div><span>Visszatérő</span><b>'+fok(v)+'<small>°C</small></b></div>'+
     '<div><span>'+(k||cel!=null?'Parancsolt':'Lehűlés a körben')+'</span><b>'+(k||cel!=null?(cel!=null?fok(cel):'–'):fok(dt))+'<small>°C</small></b></div></div>'+
@@ -708,12 +710,16 @@ function hsKartya(v){
   else if(v.lg_defrost===1)all='Leolvaszt – ez pár perc, utána folytatja.';
   else all=hmv===true?'Most a melegvíz-tartályt melegíti, az alján lévő spirálon át.':hmv===false?'Most a puffert melegíti, az alján lévő spirálon át.':'Működik.';
   const d=(n,x)=>'<div><span>'+n+'</span><b>'+x+'</b></div>';
+  const nyRossz=v.lg_nyomas!=null&&(v.lg_nyomas<1||v.lg_nyomas>2.8);
   const nemFut=!megy&&(v.bizt_mv===1||v.bizt_pu===1);
   if(nemFut)all='⚠️ A hőszivattyú nem fűt, pedig kellene – a fűtőszál pótolja hálózatról. Érdemes megnézni a gépet.';
   return '<div class="card kor'+(megy?' fut':'')+'"><div class="kor-fej"><h3>♨️ Hőszivattyú</h3>'+
     (nemFut?'<span class="badge b-buy">⚠️ Nem fűt</span>':megy==null?'':'<span class="badge '+(megy?'b-komf':'b-kezi')+'">'+(megy?(hmv===true?'🚿 Melegvíz':hmv===false?'🛢️ Puffer':'🔥 Működik'):'💤 Áll')+'</span>')+'</div>'+svg+
     '<div class="kor-sor">'+d('Előremenő',fok(e)+'<small>°C</small>')+d('Visszatérő',fok(vi)+'<small>°C</small>')+d('Felvett áram',watt(p))+'</div>'+
     (ho!=null?'<div class="kor-sor ket">'+d('Leadott hő',watt(ho))+d('Hatékonyság (COP)',cop!=null?szam(cop,1):'–')+d('Átfolyás',szam(v.lg_aram,1)+'<small>l/perc</small>')+'</div>':'')+
+    (megy&&v.lg_komp_rpm>0||v.lg_nyomas!=null?'<div class="kor-sor ket">'+(megy&&v.lg_komp_rpm>0?d('Kompresszor',szam(v.lg_komp_rpm,0)+'<small>/perc</small>'):'')+
+      (v.lg_nyomas!=null?d('Víznyomás',szam(v.lg_nyomas,1)+'<small>bar</small>'):'')+'</div>':'')+
+    (nyRossz?'<div class="kor-all"><span class=rossz>⚠️ A víznyomás '+(v.lg_nyomas<1?'alacsony':'magas')+' ('+szam(v.lg_nyomas,1)+' bar) – '+(v.lg_nyomas<1?'utána kell tölteni a vizet':'érdemes szakemberrel megnézetni')+'.</span></div>':'')+
     '<div class="kor-all">'+all+'</div><div class="szg"><div id="fg_hs"></div><div class="mginfo mut" id="fi_hs"></div></div></div>';
 }
 function fkKartya(v){
@@ -795,7 +801,8 @@ function melegvizKartya(v){
   const all=(sor.length?sor.join(' · '):'Most semmi nem fűti.')+(bz!=null?' · biztonsági szint: '+fok(bz,0)+'°':'');
   return '<div class="card kor'+(tolt||szalBe||hsAkt?' fut':'')+'"><div class="kor-fej"><h3>🚿 Melegvíz-tartály</h3>'+
     (alatt?'<span class="badge b-buy">⚠️ Biztonsági fűtés</span>':tolt?'<span class="badge b-komf">🔥 Töltődik</span>':szalBe?'<span class="badge b-sun">⚡ Fűtőszál</span>':hsAkt?'<span class="badge b-komf">♨️ Hőszivattyú</span>':'')+'</div>'+svg+
-    '<div class="kor-sor">'+dobozR('Fent',fok(v.bojler_fent)+'<small>°C</small>')+dobozR('Lent',fok(v.m12)+'<small>°C</small>')+dobozR('Fűtőszál',szalSzoveg(v.b_szaz,v.b_kont,v.b_term===1))+'</div>'+
+    '<div class="kor-sor">'+(v.bojler_fent==null&&v.lg_hmv_hom!=null?dobozR('Tartály (hőszivattyú)',fok(v.lg_hmv_hom)+'<small>°C</small>'):dobozR('Fent',fok(v.bojler_fent)+'<small>°C</small>'))+
+      dobozR('Lent',fok(v.m12)+'<small>°C</small>')+dobozR('Fűtőszál',szalSzoveg(v.b_szaz,v.b_kont,v.b_term===1))+'</div>'+
     '<div class="kor-all">'+all.charAt(0).toUpperCase()+all.slice(1)+(sor.length?'.':'')+'</div><div class="szg"><div id="fg_mv"></div><div class="mginfo mut" id="fi_mv"></div></div></div>';
 }
 
@@ -826,7 +833,7 @@ function pufferKartya(v){
   if(bz!=null)all+=' Biztonsági szint: '+fok(bz,0)+'°.';
   return '<div class="card kor'+(megy||szalBe||hsAkt?' fut':'')+'"><div class="kor-fej"><h3>🛢️ Puffertartály</h3>'+
     (alatt?'<span class="badge b-buy">⚠️ Biztonsági fűtés</span>':kisul?'<span class="badge b-eco">⬇️ Kisül</span>':tolt?'<span class="badge b-komf">⬆️ Töltődik</span>':szalBe?'<span class="badge b-sun">⚡ Fűtőszál</span>':hsAkt?'<span class="badge b-komf">♨️ Hőszivattyú</span>':'')+'</div>'+svg+
-    '<div class="kor-sor">'+dobozR('Fent',fok(v.puffer_fent)+'<small>°C</small>')+dobozR('Lent',fok(v.m13)+'<small>°C</small>')+dobozR('Fűtőszál',szalSzoveg(v.p_szaz,v.p_kont,v.p_term===1))+'</div>'+
+    '<div class="kor-sor">'+dobozR(v.puffer_lg?'Puffer (hőszivattyú)':'Fent',fok(v.puffer_fent)+'<small>°C</small>')+dobozR('Lent',fok(v.m13)+'<small>°C</small>')+dobozR('Fűtőszál',szalSzoveg(v.p_szaz,v.p_kont,v.p_term===1))+'</div>'+
     '<div class="kor-all">'+all+'</div><div class="szg"><div id="fg_pu"></div><div class="mginfo mut" id="fi_pu"></div></div></div>';
 }
 function cs(ikon,nev,ertek,al){return '<div class="cs"><div class="ic">'+ikon+'</div><h4>'+nev+'</h4><div class="v">'+ertek+'</div><div class="s">'+(al||'')+'</div></div>'}
@@ -894,7 +901,7 @@ const DEMO=(location.search.includes('demo')||window.BEMUTATO)?{m03:31.4,m04:27.
   bojler_fent:52.3,puffer_fent:47.8,b_szaz:0,p_szaz:62,b_kont:0,p_kont:1,di_pompa2:1,di_pompa3:0,di_igenyp:1,di_igenyr:0,
   e1_p:0,e2_p:1650,i_ho:212,imp_ho:96,exp_ho:14,b_ho:38,p_ho:71,hsz_ho:148,imp_teg:5.1,exp_teg:1.2,b_teg:3.4,p_teg:6.2,hsz_teg:9.8,
   imp_mho:61,exp_mho:42,b_mho:52,p_mho:118,hsz_mho:121,
-  i_p:4250,i_nap:12.4,h_p:35,e3_p:1840,kazan_be:1,m15:31.2,lg_elo:36.5,lg_vissza:31.2,lg_aram:24.5,lg_pompa:1,lg_komp:1,lg_hmv:0,imp_nap:3.2,exp_nap:0.4,b_nap:2.1,p_nap:4.6,hsz_nap:7.9}:null;
+  i_p:4250,i_nap:12.4,h_p:35,e3_p:1840,kazan_be:1,m15:31.2,lg_elo:36.5,lg_vissza:31.2,lg_aram:24.5,lg_pompa:1,lg_komp:1,lg_hmv:0,lg_komp_rpm:2340,lg_nyomas:1.7,lg_kint:6.1,lg_hmv_hom:48.6,imp_nap:3.2,exp_nap:0.4,b_nap:2.1,p_nap:4.6,hsz_nap:7.9}:null;
 function demoAll(){
   const n=Math.floor(Date.now()/10000)%4, kint=6.3;
   const kor=(g,ero,hiany,mod,nev,G=g<35?[-15,38,15,24,22,40]:[-15,60,15,30,25,65])=>mod==='igeny'?{mod,cel:Math.round((g+.6+ero*hiany)*10)/10,gorbe:g,eloT:.6,szobaT:Math.round(ero*hiany*10)/10,kint,kintMert:true,kerok:nev,g:G}
@@ -916,7 +923,10 @@ async function frissit(){
     const f=s.f, most=new Date(f.most*1000);
     $('fIdo').textContent=f.ido?NAPOK[(most.getDay()+6)%7]+', '+hhmm(most):'nincs pontos idő';
     if(!f.ido&&!idoKuldve){idoKuldve=true;fetch('/api/ido?t='+Math.floor(Date.now()/1000))}
-    $('idoUzenet').innerHTML=f.ido?'':'<div class="card uzenet">⏱️ A vezérlőnek nincs pontos ideje (nincs internet) – a program addig Eco-n tart.</div>';
+    const nemJel=f.sz.filter(r=>r.van&&r.hom==null), vanSz=f.sz.filter(r=>r.van).length;
+    $('idoUzenet').innerHTML=(f.ido?'':'<div class="card uzenet">⏱️ A vezérlőnek nincs pontos ideje (nincs internet) – a program addig Eco-n tart.</div>')+
+      (nemJel.length&&!DEMO?'<div class="card uzenet">📡 '+(nemJel.length===vanSz?'A szobák hőmérői nem jelentkeznek':'Nem jelentkezik a hőmérő: '+esc(nemJel.map(r=>r.nev||'szoba').join(', ')))+
+        ' – addig a heti program szerint fűtünk (Komfort-időben fűt, Eco-ban a padló temperál). Érdemes megnézni az elemet.</div>':'');
     rajzolSzobak();rajzolMv();
     if(oldal==='futes')rajzolFutes();
     if(oldal==='prog'&&!pPiszkos)progSzobak();
@@ -928,10 +938,11 @@ async function frissit(){
     NAPLO=d.naplo||{};
     if(d.hua){Object.assign(V,d.hua);VH=true}else VH=false;
     if(d.lg)Object.assign(V,d.lg);
+    if((V.puffer_fent==null||V.puffer_fent>=99)&&V.lg_puffer_hom!=null){V.puffer_fent=V.lg_puffer_hom;V.puffer_lg=1}
     if(d.vez)Object.assign(V,d.vez);
     if(DEMO){V=Object.assign({},DEMO,demoAll().v);VF=true;NAPLO={i_teg:18.6,i_mho:388}}
-    const mert=VF&&V.m07!=null, kint=mert?V.m07:(S&&S.f.kint!=null?S.f.kint:null);
-    $('fejKint').innerHTML=kint!=null?'<b>'+fok(kint)+'°</b><span>'+(mert?'kint':'kint (előrejelzés)')+'</span>':'';
+    const mert=VF&&V.m07!=null&&V.hb_pt07!==1, mertLg=!mert&&V.lg_kint!=null, kint=mert?V.m07:mertLg?V.lg_kint:(S&&S.f.kint!=null?S.f.kint:null);
+    $('fejKint').innerHTML=kint!=null?'<b>'+fok(kint)+'°</b><span>'+(mert?'kint':mertLg?'kint (hőszivattyú)':'kint (előrejelzés)')+'</span>':'';
     $('iKint').innerHTML=kint!=null?(mert?'kint most (mérve) ':'most az előrejelzés szerint ')+'<b style="color:var(--text)">'+fok(kint)+'°</b>':'';
     if(oldal==='futes')rajzolFutes();
     if(oldal==='aram')rajzolAram();
