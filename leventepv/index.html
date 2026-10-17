@@ -374,7 +374,7 @@ function szamol(){
   s7ok+=3;expOk+=1;
   const up=Math.round((Date.now()-t0)/1000)+86400*3+4200;
   return {fw:'LeventePV 0.1.0 (DEMO)',ido:most.getFullYear()+'-'+String(most.getMonth()+1).padStart(2,'0')+'-'+String(most.getDate()).padStart(2,'0')+' '+most.toTimeString().slice(0,8),
-    idoOk:true,uptime:up,heap:148200+Math.round(Math.random()*3000),heapMin:121400,
+    idoOk:true,uptime:up,inditas:'bekapcsolas',heap:148200+Math.round(Math.random()*3000),heapMin:121400,
     net:'STA Levente-Otthon 192.168.0.50 (fix, -61 dBm)',sta_ok:true,sta_ip:'192.168.0.50',sta_ssid:'Levente-Otthon',
     w_ssid:'Levente-Otthon',w_ip:'192.168.0.50',w_mask:'255.255.255.0',w_gw:'192.168.0.1',cfg,
     nap:{ok:true,elev:np.el,azim:np.az,kel:kel?hhmm(kel):'--:--',del:hhmm(del),nyug:ny?hhmm(ny):'--:--',hossz:kel&&ny?Math.round((ny-kel)/60000):0},
@@ -615,7 +615,7 @@ async function frissit(){
      '<span class=mut>Rossz jelszó, vagy a hálózat itt nem érhető el. Ellenőrizd lent, és mentsd újra.</span>';$('wAllCard').style.borderColor='#ef4444'}
    else{e.innerHTML='<span class=mut>Még nincs beállítva helyi WiFi – add meg lent.</span>';$('wAllCard').style.borderColor=''}}}
     $('fIdo').textContent=s.ido;
-    $('fNet').textContent=s.net+' · heap '+Math.round(s.heap/1024)+'k (min '+Math.round(s.heapMin/1024)+'k) · '+s.fw;
+    $('fNet').textContent=s.net+' · heap '+Math.round(s.heap/1024)+'k (min '+Math.round(s.heapMin/1024)+'k) · '+s.fw+(s.inditas?' · indulás: '+s.inditas:'');
     if(!wifiNyitva){wifiNyitva=true;if(!/^STA [^:]*\d+\.\d+\.\d+\.\d+/.test(s.net||''))showPage('wifi',$('navWifi'))}
     if(!cfgBetoltve){
       const c=s.cfg;for(const k in c){const e=$('c_'+k);if(!e)continue;if(e.type==='checkbox')e.checked=!!c[k];else e.value=c[k]}
