@@ -280,7 +280,7 @@ const HELY=[
  {k:'gaz',nev:'🥶 Extrém hideg – gázkazán',ido:'február 2., 06:30',ev:'tel',kint:-18,
   le:'Kemény fagy, a puffer kihűlt, nem ég a tűz, és a nappali 45 perce 2 fokkal a kívánt alatt van. Most – kivételesen – a gázkazán fűti a radiátorokat. A V1 szelep a puffer felé zár: a puffer gázos meleget soha nem kap.',
   inv:{pv:0,ak:0,halo:520,haz:520,futo:0,pompa:0,soc:12},
-  puf:{fel:27,le:22},kaz:{T:9,eg:false},rad:{elo:64,vissza:50,cel:66,szelep:88,szivattyu:true},forras:'gaz',gaz:true,
+  puf:{fel:27,le:22},kaz:{T:9,eg:false},rad:{elo:64,vissza:50,cel:66,szelep:0,szivattyu:true},forras:'gaz',gaz:true,
   viz:{idey:false,tele:false,be:false,ma:0,maW:0}}];
 const SZOBAK=[{nev:'Nappali',c:'#fb923c'},{nev:'Hálószoba',c:'#a78bfa'},{nev:'Gyerekszoba',c:'#2dd4bf'}];
 const SZM={nyar:[[25.8,21,'eco'],[25.1,21,'eco'],[25.4,21,'eco']],tuz:[[21.2,21.5,'komf'],[20.1,20,'komf'],[21.6,21.5,'komf']],
@@ -433,8 +433,10 @@ function spiralR(kaz,puf){
 function rajzolRendszer(){
   const r=H.rad, f=H.forras, kaz=f==='kazan', puf=f==='puffer', gaz=f==='gaz', megy=!!r;
   const fel=megy&&!gaz;
-  const X=160, XV=196, YE=150, YV=228, YG=124, Y3=96, YP=64, YR=40, YGV=176, XGE=246, XGV=272;
-  let s='<svg viewBox="0 0 350 262">';
+  const X=160, XV=196, YE=150, YV=228, XP=88, X2=124, D=40;
+  const Y3=D+YE-40, YP=Y3-32, Y5=YP-32, YJ=Y5-34, YR=40, XG=60;
+  let s='<svg viewBox="0 0 350 '+(262+D)+'" style="max-height:330px">';
+  s+='<g transform="translate(0 '+D+')">';
   s+='<rect x="8" y="132" width="58" height="108" rx="10" fill="#1a2540" stroke="#cbd5e1" stroke-opacity=".5" stroke-width="2"/>'+
     (H.kaz.eg?'<text x="37" y="200" text-anchor="middle" font-size="30" class="langol">🔥</text>':'<text x="37" y="198" text-anchor="middle" font-size="22" opacity=".45">🪵</text>')+
     '<text x="37" y="158" text-anchor="middle" font-size="14" font-weight="800">'+H.kaz.T+'°</text><text x="37" y="256" text-anchor="middle" font-size="10.5" fill-opacity=".65">fáskazán</text>';
@@ -443,30 +445,39 @@ function rajzolRendszer(){
     spiralR(kaz,puf)+'<g transform="translate(688 0) scale(-1 1)">'+futoszalR(344,190,16,H.inv.futo>20)+'</g>'+
     '<text x="316" y="144" text-anchor="middle" font-size="12.5" font-weight="800" style="fill:#0b1220">'+H.puf.fel+'°</text><text x="316" y="236" text-anchor="middle" font-size="12.5" font-weight="800" style="fill:#0b1220">'+H.puf.le+'°</text>'+
     '<text x="316" y="258" text-anchor="middle" font-size="10.5" fill-opacity=".65">puffer (spirál)</text>';
-  s+=csoR('M66 '+YE+'H'+X,'e',kaz,!kaz);
+  s+=csoR('M66 '+YE+'H'+X2,'e',kaz,!kaz)+csoR('M'+X2+' '+YE+'H'+X,'e',kaz,!kaz)+csoR('M'+X2+' '+YE+'V'+YV,'e',kaz,!kaz);
   s+=kaz?csoR('M'+X+' '+YE+'H288','e',true,false):csoR('M288 '+YE+'H'+X,'e',puf,!puf);
-  s+=kaz?csoR('M288 '+YV+'H'+XV,'v',true,false)+csoR('M'+XV+' '+YV+'H66','v',true,false)
-    :csoR('M66 '+YV+'H'+XV,'v',false,true)+csoR('M'+XV+' '+YV+'H288','v',puf,!puf);
-  s+=pompaR(104,YV,kaz)+'<text x="104" y="256" text-anchor="middle" font-size="10" fill-opacity=".6">kazán pompa</text>';
-  s+='<g>'+[0,1,2,3].map(k=>'<rect x="'+(138+k*12)+'" y="6" width="9" height="'+(YR-6)+'" rx="4" fill="'+(megy?hoSzin(r.elo):'#334155')+'"/>').join('')+'</g>'+
-    '<text x="130" y="26" text-anchor="end" font-size="10.5" fill-opacity=".65">radiátorok</text>';
-  s+=csoR('M'+X+' '+YE+'V'+YG,'e',fel,!fel)+csoR('M'+X+' '+YG+'V'+Y3,'e',megy,!megy)+csoR('M'+X+' '+Y3+'V'+YR,'e',megy,!megy);
-  s+=gaz?csoR('M'+XV+' '+YR+'V'+YGV,'v',true,false)+csoR('M'+XV+' '+YGV+'V'+YV,'v',false,true):csoR('M'+XV+' '+YR+'V'+YV,'v',megy,!megy);
-  s+=csoR('M'+XV+' '+Y3+'H'+X,'v',megy,!megy);
-  s+='<rect x="232" y="6" width="54" height="40" rx="9" fill="#1a2540" stroke="'+(gaz?'#a78bfa':'#cbd5e1')+'" stroke-opacity="'+(gaz?1:.4)+'" stroke-width="2"/>'+
-    '<text x="259" y="32" text-anchor="middle" font-size="18"'+(gaz?' class="langol"':' opacity=".4"')+'>'+(gaz?'🔵':'⚪')+'</text><text x="292" y="30" font-size="10" fill-opacity=".65">gáz-</text><text x="292" y="42" font-size="10" fill-opacity=".65">kazán</text>';
-  s+=csoR('M'+XGE+' 46V'+YG+'H'+X,'e',gaz,!gaz)+csoR('M'+XV+' '+YGV+'H'+XGV+'V46','v',gaz,!gaz);
+  s+=kaz?csoR('M288 '+YV+'H'+XV,'v',true,false)+csoR('M'+XV+' '+YV+'H'+X2,'v',true,false)+csoR('M'+X2+' '+YV+'H66','e',true,false)
+    :csoR('M66 '+YV+'H'+X2,'v',false,true)+csoR('M'+X2+' '+YV+'H'+XV,'v',false,true)+csoR('M'+XV+' '+YV+'H288','v',puf,!puf);
+  s+=pompaR(XP,YV,kaz)+'<text x="'+XP+'" y="256" text-anchor="middle" font-size="10" fill-opacity=".6">pompa</text>';
+  s+='<g transform="translate('+X2+' '+YV+')"><path d="M-12 -9L0 0L-12 9Z M12 -9L0 0L12 9Z M-9 -12L0 0L9 -12Z" fill="#cbd5e1" stroke="#0b1220" stroke-width="1.5"/>'+
+    '<circle r="3.5" fill="#0b1220"/><rect x="-4" y="7" width="8" height="12" rx="4" fill="#f87171" stroke="#0b1220" stroke-width="1.5"/></g>'+
+    '<text x="'+(X2-12)+'" y="256" font-size="10" fill-opacity=".6">V2 termo 60°</text>';
   s+='<g transform="translate('+X+' '+YE+')"><path d="M-12 -9L0 0L-12 9Z M12 -9L0 0L12 9Z M-9 -12L0 0L9 -12Z" fill="#cbd5e1" stroke="#0b1220" stroke-width="1.5"/><circle r="3.5" fill="#0b1220"/></g>'+
     '<text x="'+X+'" y="'+(YE+26)+'" text-anchor="middle" font-size="10" fill-opacity=".6">V1 (3 pontos)</text>';
+  s+='</g>';
+  s+='<g>'+[0,1,2,3].map(k=>'<rect x="'+(155+k*12)+'" y="6" width="9" height="'+(YR-6)+'" rx="4" fill="'+(megy?hoSzin(r.elo):'#334155')+'"/>').join('')+'</g>'+
+    '<text x="148" y="26" text-anchor="end" font-size="10.5" fill-opacity=".65">radiátorok</text>';
+  s+=csoR('M'+X+' '+(YE+D)+'V'+Y3,'e',fel,!fel)+csoR('M'+X+' '+Y3+'V'+Y5,'e',megy,!megy);
+  s+=csoR('M'+X+' '+Y5+'V'+YJ,'e',fel,!fel)+csoR('M'+X+' '+YJ+'V'+YR,'e',megy,!megy);
+  s+=csoR('M'+X+' '+Y5+'H'+(XG+28),'e',gaz,!gaz)+csoR('M'+XG+' '+(Y5-20)+'V'+YJ+'H'+X,'e',gaz,!gaz);
+  s+='<rect x="'+(XG-28)+'" y="'+(Y5-20)+'" width="56" height="40" rx="9" fill="#1a2540" stroke="'+(gaz?'#a78bfa':'#cbd5e1')+'" stroke-opacity="'+(gaz?1:.4)+'" stroke-width="2"/>'+
+    '<text x="'+XG+'" y="'+(Y5+7)+'" text-anchor="middle" font-size="18"'+(gaz?' class="langol"':' opacity=".4"')+'>'+(gaz?'🔵':'⚪')+'</text>'+
+    '<text x="'+XG+'" y="'+(Y5+33)+'" text-anchor="middle" font-size="10.5" fill-opacity=".65">gázkazán</text>';
+  s+=csoR('M'+XV+' '+YR+'V'+Y3,'v',megy,!megy)+csoR('M'+XV+' '+Y3+'V'+(YV+D),'v',fel,!fel)+csoR('M'+XV+' '+Y3+'H'+X,'v',megy,!megy);
   s+='<g transform="translate('+X+' '+Y3+')"><path d="M-9 -12L0 0L9 -12Z M-9 12L0 0L9 12Z M12 -9L0 0L12 9Z" fill="#cbd5e1" stroke="#0b1220" stroke-width="1.5"/><circle r="3.5" fill="#0b1220"/></g>'+
     '<text x="'+(X-16)+'" y="'+(Y3+4)+'" text-anchor="end" font-size="10" fill-opacity=".6">V3 keverő'+(r?' '+r.szelep+'%':'')+'</text>'+pompaR(X,YP,megy);
+  s+='<g transform="translate('+X+' '+Y5+')"><path d="M-9 -12L0 0L9 -12Z M-9 12L0 0L9 12Z M-12 -9L0 0L-12 9Z" fill="#cbd5e1" stroke="#0b1220" stroke-width="1.5"/><circle r="3.5" fill="#0b1220"/></g>'+
+    '<text x="'+(X-16)+'" y="'+(Y5-6)+'" text-anchor="end" font-size="10" fill-opacity=".6">V5 váltó</text>';
   if(r)s+='<text x="'+(X-20)+'" y="'+(YP+5)+'" text-anchor="end" font-size="13" font-weight="800">'+r.elo+'°</text><text x="'+(XV+8)+'" y="'+(YP+4)+'" font-size="13" font-weight="800">'+r.vissza+'°</text>';
   s+='</svg>';
   const [fn,c,t]=forrasSzoveg();
   $('rendszer').className='card kor'+(megy?' fut':'');
   $('rendszer').innerHTML='<div class="kor-fej"><h3>Fűtési rendszer</h3>'+badge(c,fn)+'</div>'+s+
     '<div class="kor-sor">'+dobozR('Előremenő',r?r.elo+'<small>°C</small>':'–')+dobozR('Visszatérő',r?r.vissza+'<small>°C</small>':'–')+dobozR('Kívánt',r?r.cel+'<small>°C</small>':'–')+'</div>'+
-    '<div class="kor-all">'+t+(r&&!gaz?' A V3 keverőszelep a kívánt előremenőt tartja: ennyi kell most a szobáknak ennél a kinti hőmérsékletnél.':'')+'</div>';
+    '<div class="kor-all">'+t+(r&&!gaz?' A V3 keverőszelep a kívánt előremenőt tartja: ennyi kell most a szobáknak ennél a kinti hőmérsékletnél.':'')+
+    (r&&gaz?' A V5 váltó a radiátorok vizét a gázkazánon vezeti át (mint a melegvíznél), a V3 a puffer felé zárva: a radiátorok vize csak a saját körében kering, a puffert nem melegíti.':'')+
+    (kaz?' A V2 termosztatikus szelep (áram nélkül) a kazán meleg vizéből kever a visszatérőbe, hogy a kazánba ne menjen 60 °C-nál hidegebb víz.':'')+'</div>';
 }
 function rajzolGorbe(){
   const x1=-15,y1=60,x2=15,y2=30,mn=25,mx=70,W=300,Hh=150,pl=30,pr=8,pt=10,pb=22,xa=-22,xb=22,ya=20,yb=74;
@@ -487,7 +498,7 @@ function rajzolGorbe(){
 function rajzolForras(){
   const L=[['🔥','Ég a tűz','A fáskazán hője a radiátorokhoz megy (V1 szelep), a többlet a pufferbe – amíg a kazán melegebb a puffernél.','kazan'],
     ['🛢️','Van meleg a pufferben','Nem ég a tűz: a radiátorok a puffer spirálján át kapják a meleget. A kazán pompája áll, hogy ne hűtse a puffert.','puffer'],
-    ['🔵','Extrém hideg','Ha semmi más nem elég, és a lakás tartósan hideg: a gázkazán (egy kontaktus indítja) – csak a radiátoroknak, a puffernek soha.','gaz']];
+    ['🔵','Extrém hideg','Ha semmi más nem elég, és a lakás tartósan hideg: a gázkazán (egy kontaktus indítja). A V5 váltó a radiátorok vizét átvezeti rajta – csak a radiátoroknak, a puffernek soha.','gaz']];
   $('forrasK').innerHTML='<h3>🔀 A sorrend</h3><ul class="felt">'+L.map(x=>'<li style="'+(H.forras===x[3]?'':'opacity:.55')+'"><i>'+x[0]+'</i><div><b>'+x[1]+'</b>'+(H.forras===x[3]?' <span class="badge b-ok" style="padding:2px 8px;font-size:11px">most</span>':'')+'<small>'+x[2]+'</small></div></li>').join('')+'</ul>'+
     '<p class="hint">A szobák döntik el, kell-e fűtés: ha valamelyik a kívánt alatt van, a radiátorok indulnak.</p>';
 }
