@@ -216,7 +216,8 @@ input[type=checkbox]{width:22px;height:22px;min-height:0;accent-color:#06b6d4}
         <label class="sor">Hőleadás (túlmelegedés) [°C] <input type="number" value="90"></label>
         <label class="sor">Puffer fűtőszál engedélyezve <input type="checkbox" checked></label>
         <label class="sor">Puffer max. (termosztát) [°C] <input type="number" value="85"></label>
-        <label class="sor">Melegvíz-minimum a puffer tetején [°C] <input type="number" value="55"></label>
+        <label class="sor">Melegvíz-cél [°C] <input type="number" value="45"></label>
+        <label class="sor">Melegvíz közvetlenül a pufferből, ha fent legalább [°C] <input type="number" value="53"></label>
         <label class="sor">V1 kazán-szelep teljes út [s] <input type="number" value="140"></label>
       </div>
       <div class="card"><h3>🔵 Gázkazán <span class="ki szerv">szerviz</span></h3>
@@ -349,8 +350,9 @@ function rajzolPuffer(){
     '<text x="104" y="35" text-anchor="end" font-size="11" fill-opacity=".6">fent</text><text x="104" y="147" text-anchor="end" font-size="11" fill-opacity=".6">lent</text>'+
     '<text x="218" y="30" font-size="11" fill-opacity=".7">🌡️ termosztát</text><text x="218" y="46" font-size="11" font-weight="700" fill-opacity=".7">határ 85°</text>'+
     '<text x="218" y="104" font-size="11" fill-opacity=".7">fűtőszál</text>')+'</svg>';
-  const all=be?'A napelem fölöslegét a fűtőszál a pufferbe viszi. A melegvíz is innen jön.':H.forras==='kazan'?'A fáskazán tölti – ami a radiátoroknak már nem kell, ide jön.':
-    H.forras==='puffer'?'A radiátorok most innen kapják a meleget.':H.forras==='gaz'?'Kihűlt – a gázkazán ezt nem fűti (soha).':'Tárolja a hőt.';
+  const mv=H.puf.fel>=53?'🚿 A melegvíz most közvetlenül a pufferből jön.':'🚿 A melegvíz előmelegítve a pufferből, a gázos vízmelegítő rásegít.';
+  const all=(be?'A napelem fölöslegét a fűtőszál a pufferbe viszi.':H.forras==='kazan'?'A fáskazán tölti – ami a radiátoroknak már nem kell, ide jön.':
+    H.forras==='puffer'?'A radiátorok most innen kapják a meleget.':H.forras==='gaz'?'Kihűlt – a gázkazán ezt nem fűti (soha).':'Tárolja a hőt.')+'<br>'+mv;
   $('pufferK').className='card kor'+(be||H.forras==='kazan'?' fut':'');
   $('pufferK').innerHTML='<div class="kor-fej"><h3>🛢️ Puffer</h3>'+(be?badge('b-sun','⚡ Fűtőszál'):H.forras==='kazan'?badge('b-komf','⬆️ Töltődik'):H.forras==='puffer'?badge('b-eco','⬇️ Ad'):'')+'</div>'+svg+
     '<div class="kor-sor">'+dobozR('Fent',p.fel+'<small>°C</small>')+dobozR('Lent',p.le+'<small>°C</small>')+dobozR('Fűtőszál',watt(H.inv.futo))+'</div><div class="kor-all">'+all+'</div>';
@@ -461,7 +463,7 @@ function rajzolViz(){
       v.idey?'Most nem tölt.':'Az öntözés csak nyáron (május–szeptember) aktív – télen a pompa áll.')+'</div>';
   const nap=H.inv.pv>20, fol=H.inv.futo+H.inv.pompa>=1100;
   const F=[[v.idey,'Nyári idény','május 1. – szeptember 30.'],[!v.tele,'A tartály nincs tele','a túlfolyás-gátló úszó jelez (a kútban a pompa saját úszója a szárazonfutás ellen)'],
-    [H.puf.fel>=55,'A puffer elég meleg a melegvízhez','a melegvíz is a pufferből jön, ezért az az első (alap 55 °C fent)'],
+    [H.puf.fel>=53,'A puffer elég meleg a melegvízhez','a melegvíz is a pufferből jön, ezért az az első (alap 53 °C fent)'],
     [nap&&fol,'Van napelem-fölösleg legalább a pompa teljesítményéig','a fűtőszál már legalább ~1,1 kW fölösleget eszik – ebből kap a pompa'],
     [H.inv.ak<=100&&H.inv.halo<20,'Az akku nem merül, a hálózatról nem vesz','ha mégis: 1 perc múlva leáll']];
   $('feltetelek').innerHTML=F.map(x=>'<li><i>'+(x[0]?'✅':'⬜')+'</i><div>'+x[1]+'<small>'+x[2]+'</small></div></li>').join('');
