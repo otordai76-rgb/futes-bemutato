@@ -145,6 +145,7 @@ input[type=checkbox]{width:22px;height:22px;min-height:0;accent-color:#06b6d4}
       <div class="card" id="akkuK"></div>
       <div class="card kor" id="pufferK"></div>
     </div>
+    <div class="card kor" id="mvK"></div>
     <div class="grid2">
       <div class="card kor" id="futesKis" style="cursor:pointer" onclick="lapra('futes')"></div>
       <div class="card kor" id="vizKis" style="cursor:pointer" onclick="lapra('ontozes')"></div>
@@ -375,6 +376,45 @@ function rajzolKis(){
     '<div class="kor-sor">'+dobozR('Pompa',v.be?watt(H.inv.pompa):'áll')+dobozR('Ma futott',v.ma?Math.floor(v.ma/60)+'<small>ó</small> '+v.ma%60+'<small>p</small>':'–')+dobozR('Tartály',v.tele?'tele':v.idey?'tölthető':'–')+'</div>'+
     '<div class="kor-all">'+(v.be?'A napelem fölöslegéből tölti a tartályt.':v.idey?'Akkor tölt, ha van napelem-fölösleg.':'Csak nyáron (május–szeptember) aktív.')+' <b style="color:var(--text)">Részletek ›</b></div>';
 }
+let csap=true;
+function rajzolMv(){
+  const fel=H.puf.fel, le=H.puf.le, kozv=fel>=53, t10=csap?Math.max(14,fel-4):null, csapC=kozv?45:45;
+  const hid='#60a5fa', mel=hoSzin(t10!=null?t10:fel), gazSz='#f87171';
+  const ut=(d,szin,megy,all,v)=>'<path class="cso'+(all?' all':'')+'" style="stroke:'+szin+';stroke-width:'+(v||6)+'" d="'+d+'"/><path class="aram'+(megy?' megy':'')+'" d="'+d+'"/>';
+  let sp='M24 196H46';for(let k=0;k<7;k++){const y=186-k*20;sp+=(k%2?'H46':'H96')+'V'+(y-10)}sp+='H96V40H150';
+  let s='<svg viewBox="0 0 350 236"><defs><linearGradient id="gm" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="'+hoSzin(fel)+'"/><stop offset="1" stop-color="'+hoSzin(le)+'"/></linearGradient>'+
+    '<linearGradient id="gs" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="'+hid+'"/><stop offset="1" stop-color="'+mel+'"/></linearGradient></defs>';
+  s+='<rect x="30" y="18" width="84" height="196" rx="28" fill="url(#gm)" stroke="#cbd5e1" stroke-opacity=".5" stroke-width="2"/>'+
+    '<text x="72" y="232" text-anchor="middle" font-size="10.5" fill-opacity=".65">puffer</text>'+
+    '<text x="72" y="34" text-anchor="middle" font-size="12" font-weight="800" style="fill:#0b1220">'+fel+'°</text><text x="122" y="212" font-size="12" font-weight="800">'+le+'°</text>';
+  s+=ut('M2 196H24',hid,csap,false)+'<path d="'+sp+'" fill="none" stroke="#0b1220" stroke-width="7" stroke-linejoin="round" opacity=".55"/>'+
+    '<path d="'+sp+'" fill="none" stroke="url(#gs)" stroke-width="4" stroke-linejoin="round"/><path class="aram'+(csap?' megy':'')+'" d="'+sp+'"/>'+
+    '<text x="4" y="176" font-size="9.5" fill-opacity=".7">hideg</text><text x="4" y="187" font-size="9.5" fill-opacity=".7">víz</text>';
+  s+='<circle cx="140" cy="40" r="4.5" fill="#fff" stroke="#0b1220" stroke-width="2"/><text x="140" y="26" text-anchor="middle" font-size="11" font-weight="800">'+(t10!=null?t10+'°':'–')+'</text>';
+  s+=ut('M162 40H268',mel,csap&&kozv,!kozv);
+  s+=ut('M162 40V120H186',mel,csap&&!kozv,kozv)+ut('M236 120H252V40',gazSz,csap&&!kozv,kozv);
+  s+='<rect x="186" y="96" width="50" height="50" rx="9" fill="#1a2540" stroke="'+(!kozv?'#f87171':'#cbd5e1')+'" stroke-opacity="'+(!kozv?1:.4)+'" stroke-width="2"/>'+
+    '<text x="211" y="128" text-anchor="middle" font-size="20"'+(!kozv&&csap?' class="langol"':' opacity=".4"')+'>'+(!kozv&&csap?'🔥':'💤')+'</text>'+
+    '<text x="211" y="162" text-anchor="middle" font-size="10" fill-opacity=".65">gázos</text><text x="211" y="174" text-anchor="middle" font-size="10" fill-opacity=".65">vízmelegítő</text>';
+  s+='<g transform="translate(162 40)"><path d="M-12 -9L0 0L-12 9Z" fill="#cbd5e1" stroke="#0b1220" stroke-width="1.5"/>'+
+    '<path d="M12 -9L0 0L12 9Z" fill="'+(kozv?'#22c55e':'#475569')+'" stroke="#0b1220" stroke-width="1.5"/>'+
+    '<path d="M-9 12L0 0L9 12Z" fill="'+(!kozv?'#f87171':'#475569')+'" stroke="#0b1220" stroke-width="1.5"/><circle r="3.5" fill="#0b1220"/></g>'+
+    '<text x="162" y="74" text-anchor="middle" font-size="10" fill-opacity=".7">V4</text>';
+  s+='<g transform="translate(268 40)"><circle r="11" fill="#141d2e" stroke="#cbd5e1" stroke-width="2"/><text y="4" text-anchor="middle" font-size="10">🌡️</text></g>'+
+    '<text x="268" y="20" text-anchor="middle" font-size="9.5" fill-opacity=".65">forrázásvédő keverő</text>'+
+    ut('M279 40H318',hoSzin(csapC),csap,!csap)+'<text x="330" y="46" text-anchor="middle" font-size="22">'+(csap?'🚿':'🚰')+'</text>'+
+    (csap?'<text x="330" y="74" text-anchor="middle" font-size="12" font-weight="800">'+csapC+'°</text>':'');
+  s+='</svg>';
+  const all=!csap?'Most senki nem használ melegvizet – a V4 már előre a megfelelő állásban van.':
+    kozv?'A puffer elég meleg ('+fel+'°): a spirálban felmelegedett víz <b style="color:var(--text)">közvetlenül</b> a csapokhoz megy, a gázos vízmelegítő nem dolgozik.':
+    'A puffer nem elég meleg ('+fel+'°): a V4 átváltott, a spirálban előmelegített víz <b style="color:var(--text)">átfolyik a gázos vízmelegítőn</b>, ami a hiányzó részt pótolja – így kevesebb gáz fogy.';
+  $('mvK').className='card kor'+(csap?(kozv?' fut':' fut'):'');
+  $('mvK').innerHTML='<div class="kor-fej"><h3>🚿 Melegvíz</h3>'+(kozv?badge('b-ok','☀️ A pufferből'):badge('b-buy','🔥 Gáz rásegít'))+'</div>'+s+
+    '<div class="kor-sor">'+dobozR('Puffer fent',fel+'<small>°C</small>')+dobozR('A spirál után',t10!=null?t10+'<small>°C</small>':'–')+dobozR('A csapnál',csap?csapC+'<small>°C</small>':'–')+'</div>'+
+    '<div class="kor-all">'+all+'</div>'+
+    '<div class="chips" style="margin-top:10px"><button class="chip'+(csap?' on':'')+'" onclick="csap=!csap;rajzolMv()">'+(csap?'🚿 Csap nyitva – elzár':'🚰 Csap zárva – kinyit')+'</button></div>'+
+    '<p class="hint">A V4 a puffer teteje szerint vált: '+53+' °C fölött közvetlenül, 50 °C alatt a gázos vízmelegítőn át. Áramszünetkor magától a gázos ágra áll, így melegvíz mindig van.</p>';
+}
 function sz(i){const a=SZM[H.k][i];return [a[0],kezi[i]!=null?kezi[i]:a[1],kezi[i]!=null?'kezi':a[2]]}
 function rajzolSzobak(){
   $('szobak').innerHTML=SZOBAK.map((s,i)=>{const [m,c,mod]=sz(i),igeny=H.ev==='tel'&&m<c-0.2;
@@ -518,7 +558,7 @@ const ido=h=>Math.floor(h)+':'+ket(Math.round(h%1*60));
 
 function rajzol(){
   $('helyLeiras').textContent=H.le;
-  rajzolFolyam();rajzolAkku();rajzolPuffer();rajzolKis();rajzolSzobak();rajzolRendszer();rajzolGorbe();rajzolForras();rajzolViz();rajzolIdo();
+  rajzolFolyam();rajzolAkku();rajzolPuffer();rajzolMv();rajzolKis();rajzolSzobak();rajzolRendszer();rajzolGorbe();rajzolForras();rajzolViz();rajzolIdo();
 }
 rajzolProg();rajzol();
 </script></body></html>
