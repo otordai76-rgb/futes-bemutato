@@ -273,7 +273,7 @@ const HELY=[
   puf:{fel:58,le:37},kaz:{T:78,eg:true},rad:{elo:52,vissza:41,cel:52,szelep:46,szivattyu:true},forras:'kazan',gaz:false,
   viz:{idey:false,tele:false,be:false,ma:0,maW:0}},
  {k:'puffer',nev:'🌙 Téli éjjel, a pufferből',ido:'január 10., 02:15',ev:'tel',kint:-7,
-  le:'A tűz kialudt, de a pufferben még van meleg víz: a radiátorok onnan mennek. A kazán hidegebb a puffernél, ezért a pompája áll.',
+  le:'A tűz kialudt, de a pufferben még van meleg víz: a radiátorok onnan mennek. A kazán hidegebb a puffernél, ezért a pompája áll (a kazán-termosztát kapcsolja).',
   inv:{pv:0,ak:380,halo:0,haz:380,futo:0,pompa:0,soc:41},
   puf:{fel:58,le:38},kaz:{T:31,eg:false},rad:{elo:52,vissza:42,cel:53,szelep:72,szivattyu:true},forras:'puffer',gaz:false,
   viz:{idey:false,tele:false,be:false,ma:0,maW:0}},
@@ -452,7 +452,7 @@ function rajzolRendszer(){
   s+=pompaR(XP,YV,kaz)+'<text x="'+XP+'" y="256" text-anchor="middle" font-size="10" fill-opacity=".6">pompa</text>';
   s+='<g transform="translate('+X2+' '+YV+')"><path d="M-12 -9L0 0L-12 9Z M12 -9L0 0L12 9Z M-9 -12L0 0L9 -12Z" fill="#cbd5e1" stroke="#0b1220" stroke-width="1.5"/>'+
     '<circle r="3.5" fill="#0b1220"/><rect x="-4" y="7" width="8" height="12" rx="4" fill="#f87171" stroke="#0b1220" stroke-width="1.5"/></g>'+
-    '<text x="'+(X2-12)+'" y="256" font-size="10" fill-opacity=".6">V2 termo 60°</text>';
+    '<text x="'+(X2-12)+'" y="256" font-size="10" fill-opacity=".6">V2 termo 61°</text>';
   s+='<g transform="translate('+X+' '+YE+')"><path d="M-12 -9L0 0L-12 9Z M12 -9L0 0L12 9Z M-9 -12L0 0L9 -12Z" fill="#cbd5e1" stroke="#0b1220" stroke-width="1.5"/><circle r="3.5" fill="#0b1220"/></g>'+
     '<text x="'+X+'" y="'+(YE+26)+'" text-anchor="middle" font-size="10" fill-opacity=".6">V1 (3 pontos)</text>';
   s+='</g>';
@@ -477,7 +477,7 @@ function rajzolRendszer(){
     '<div class="kor-sor">'+dobozR('Előremenő',r?r.elo+'<small>°C</small>':'–')+dobozR('Visszatérő',r?r.vissza+'<small>°C</small>':'–')+dobozR('Kívánt',r?r.cel+'<small>°C</small>':'–')+'</div>'+
     '<div class="kor-all">'+t+(r&&!gaz?' A V3 keverőszelep a kívánt előremenőt tartja: ennyi kell most a szobáknak ennél a kinti hőmérsékletnél.':'')+
     (r&&gaz?' A V5 váltó a radiátorok vizét a gázkazánon vezeti át (mint a melegvíznél), a V3 a puffer felé zárva: a radiátorok vize csak a saját körében kering, a puffert nem melegíti.':'')+
-    (kaz?' A V2 termosztatikus szelep (áram nélkül) a kazán meleg vizéből kever a visszatérőbe, hogy a kazánba ne menjen 60 °C-nál hidegebb víz.':'')+'</div>';
+    (kaz?' A V2 termosztatikus szelep (áram nélkül) a kazán meleg vizéből kever a visszatérőbe, hogy a kazánba ne menjen 61 °C-nál hidegebb víz. A kazán pompáját a saját termosztátja indítja.':'')+'</div>';
 }
 function rajzolGorbe(){
   const x1=-15,y1=60,x2=15,y2=30,mn=25,mx=70,W=300,Hh=150,pl=30,pr=8,pt=10,pb=22,xa=-22,xb=22,ya=20,yb=74;
