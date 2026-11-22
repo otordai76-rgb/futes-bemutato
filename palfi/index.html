@@ -159,7 +159,7 @@ input[type=checkbox]{width:22px;height:22px;min-height:0;accent-color:#06b6d4}
     <section class="page" id="p-futes">
     <h2 class="resz">🛋️ Szobák</h2>
     <div class="grid3" id="szobak"></div>
-    <h2 class="resz">🔀 Radiátor-elosztó</h2>
+    <h2 class="resz">🔀 Osztó-gyűjtő és radiátorok</h2>
     <div class="card kor" id="eloszto"></div>
     <h2 class="resz">♨️ Honnan jön a meleg</h2>
     <div class="card kor" id="rendszer"></div>
@@ -216,7 +216,7 @@ input[type=checkbox]{width:22px;height:22px;min-height:0;accent-color:#06b6d4}
         <label class="sor">Szoba-eltolás erősítése [K/K] <input type="number" value="4"></label>
         <label class="sor">Előrejelzés súlya <input type="number" value="0.5" step="0.1"></label>
         <label class="sor">V2 keverőszelep teljes út [s] <input type="number" value="140"></label>
-        <label class="sor">Radiátorszelepek nyitás / zárás [s] <input type="number" value="180"></label>
+        <label class="sor">Radiátorfejek (elektromos) nyitás / zárás [s] <input type="number" value="180"></label>
         <label class="sor">Szoba kapcsolási különbség [K] <input type="number" value="0.2" step="0.1"></label>
       </div>
       <div class="card"><h3>🔥 Fáskazán és puffer <span class="ki szerv">szerviz</span></h3>
@@ -283,19 +283,22 @@ const HELY=[
   puf:{fel:58,le:38},kaz:{T:31,eg:false},rad:{elo:52,vissza:42,cel:53,szelep:72,szivattyu:true},forras:'puffer',gaz:false,
   viz:{idey:false,tele:false,be:false,ma:0,maW:0}},
  {k:'gaz',nev:'🥶 Extrém hideg – gázkazán',ido:'február 2., 06:30',ev:'tel',kint:-18,
-  le:'Kemény fagy, a puffer kihűlt, nem ég a tűz, és a nappali 45 perce 2 fokkal a kívánt alatt van. Most – kivételesen – a gázkazán fűti a radiátorokat. A V2 keverő a puffer felé zár: a puffer gázos meleget soha nem kap.',
+  le:'Kemény fagy, a puffer kihűlt, nem ég a tűz, és a szobák 45 perce 1–2 fokkal a kívánt alatt vannak. Most – kivételesen – a gázkazán fűti a radiátorokat. A V2 keverő a puffer felé zár: a puffer gázos meleget soha nem kap.',
   inv:{pv:0,ak:0,halo:520,haz:520,futo:0,pompa:0,soc:12},
   puf:{fel:27,le:22},kaz:{T:9,eg:false},rad:{elo:64,vissza:50,cel:66,szelep:0,szivattyu:true},forras:'gaz',gaz:true,
   viz:{idey:false,tele:false,be:false,ma:0,maW:0}}];
-const SZOBAK=[{nev:'Nappali',c:'#fb923c'},{nev:'Konyha',c:'#facc15'},{nev:'Hálószoba',c:'#a78bfa'},{nev:'Gyerekszoba',c:'#2dd4bf'},
-  {nev:'Dolgozószoba',c:'#60a5fa'},{nev:'Fürdőszoba',c:'#f472b6'}];
+const SZOBAK=[{nev:'Földszinti szoba',c:'#fb923c'},{nev:'Pince és előtér',c:'#facc15'},{nev:'Konyha',c:'#a78bfa'},{nev:'1. szoba',c:'#2dd4bf'},
+  {nev:'2. szoba',c:'#60a5fa'},{nev:'Folyosó',c:'#f472b6'}];
 const SZM={nyar:[[25.8,21,'eco'],[26.3,21,'eco'],[25.1,20,'eco'],[25.4,21,'eco'],[25.9,20,'eco'],[25.2,22,'eco']],
   tuz:[[21.2,21.5,'komf'],[21.8,21,'komf'],[19.6,20,'komf'],[21.6,21.5,'komf'],[20.4,21,'komf'],[22.1,23,'komf']],
   puffer:[[17.8,18,'eco'],[18.6,18,'eco'],[18.7,19,'eco'],[19.4,19,'eco'],[17.5,16,'eco'],[20.1,21,'eco']],
   gaz:[[19.5,21.5,'komf'],[19.9,21,'komf'],[19.8,20,'komf'],[20.4,21,'komf'],[18.9,20,'komf'],[21.0,23,'komf']]};
-const SZELEPEK=[{nev:'Nappali 1',sz:0},{nev:'Nappali 2',sz:0},{nev:'Konyha',sz:1},{nev:'Hálószoba',sz:2},{nev:'Gyerekszoba',sz:3},
-  {nev:'Dolgozószoba',sz:4},{nev:'Fürdőszoba',sz:5},{nev:'Előszoba',sz:0,meg:'a nappalival együtt'}];
-const MOZG=180, ATMENET={tuz:{5:['nyit',95],2:['zar',40]},puffer:{6:['nyit',130]},gaz:{},nyar:{}};
+const KOR=[{nev:'1. kör',c:'#34d399'},{nev:'2. kör',c:'#f59e0b'},{nev:'3. kör',c:'#c084fc'}];
+const SZELEPEK=[{nev:'Földszinti szoba',sz:0,k:0},{nev:'Folyosó (lent)',sz:5,k:0},{nev:'2. szoba – ablak',sz:4,k:0},
+  {nev:'Pince',sz:1,k:1},{nev:'Földszinti előtér',sz:1,k:1},{nev:'1. szoba',sz:3,k:1},{nev:'2. szoba – oldal',sz:4,k:1},
+  {nev:'Emeleti előtér',sz:5,k:2,meg:'a folyosóval'},{nev:'Bejárat',sz:5,k:2,meg:'a folyosóval'},{nev:'Konyha',sz:2,k:2},
+  {nev:'Kamra',sz:5,k:2,meg:'a folyosóval'},{nev:'Folyosó 1',sz:5,k:2},{nev:'Folyosó 2',sz:5,k:2}];
+const MOZG=180, ATMENET={tuz:{2:['nyit',95],3:['zar',40]},puffer:{9:['nyit',130]},gaz:{},nyar:{}};
 let VS=[];
 let H=HELY[1], kezi={};
 $('hely').innerHTML=HELY.map((h,i)=>'<button class="chip'+(h===H?' on':'')+'" data-i="'+i+'">'+h.nev+'</button>').join('');
@@ -380,7 +383,7 @@ function rajzolKis(){
   const [f,c,t]=forrasSzoveg(), r=H.rad;
   $('futesKis').className='card kor'+(r?' fut':'');
   $('futesKis').innerHTML='<div class="kor-fej"><h3>♨️ Fűtés</h3>'+badge(c,f)+'</div>'+
-    '<div class="kor-sor">'+dobozR('Nappali',fok(sz(0)[0])+'<small>°C</small>')+dobozR('Kint',H.kint+'<small>°C</small>')+dobozR('Radiátor',r?r.elo+'<small>°C</small>':'áll')+'</div>'+
+    '<div class="kor-sor">'+dobozR('Földszinti szoba',fok(sz(0)[0])+'<small>°C</small>')+dobozR('Kint',H.kint+'<small>°C</small>')+dobozR('Radiátor',r?r.elo+'<small>°C</small>':'áll')+'</div>'+
     '<div class="kor-all">'+t+' <b style="color:var(--text)">Részletek ›</b></div>';
   const v=H.viz;
   $('vizKis').className='card kor'+(v.be?' viz':'');
@@ -434,7 +437,7 @@ function rajzolSzobak(){
       '<div class="sz-kozep"><div class="szam">'+fok(m)+'<small>°C</small></div><div class="celblokk"><button class="kerek" onclick="cel('+i+',-0.5)">−</button>'+
       '<div class="celszam">'+fok(c)+'°<small>kívánt</small></div><button class="kerek" onclick="cel('+i+',0.5)">+</button></div></div>'+
       '<div class="allapot">'+mb+(igeny?'<span style="color:#fdba74;font-weight:700">🔥 fűtést kér</span>':H.ev==='tel'?'<span class="mut">elég meleg</span>':'<span class="mut">nyár – nincs fűtés</span>')+
-      '<span class="mut">'+SZELEPEK.map((v,k)=>v.sz===i?'🔀 '+k1(k)+'. szelep: '+vsSzoveg(k):'').filter(x=>x).join(' · ')+'</span></div></div>'}).join('');
+      '<span class="mut">'+SZELEPEK.filter(v=>v.sz===i).length+' radiátor – '+[...new Set(SZELEPEK.map((v,k)=>v.sz===i?vsSzoveg(k).replace(/… .*/,'…'):'').filter(x=>x))].join(' / ')+'</span></div></div>'}).join('');
 }
 function cel(i,d){kezi[i]=Math.round((sz(i)[1]+d)*2)/2;toast(SZOBAK[i].nev+': '+fok(kezi[i])+' °C a következő programváltásig');vsFrissit();rajzolSzobak();rajzolEloszto();rajzolKis()}
 const igeny=i=>{const [m,c]=sz(i);return H.ev==='tel'&&m<c-0.2};
@@ -447,25 +450,26 @@ function vsFrissit(){SZELEPEK.forEach((v,k)=>{const w=igeny(v.sz),x=VS[k];
 function vsSzoveg(k){const x=VS[k];return x.a==='nyitva'?'nyitva':x.a==='zarva'?'zárva':x.a==='nyit'?'nyit… '+mmss(x.t):'zár… '+mmss(x.t)}
 const VSZIN={nyitva:'#22c55e',zarva:'#475569',nyit:'#f59e0b',zar:'#60a5fa'};
 function rajzolEloszto(){
-  const r=H.rad, elo=r?r.elo:null, megy=!!r, nyitDb=VS.filter(x=>x.a==='nyitva').length;
+  const r=H.rad, elo=r?r.elo:null, megy=!!r, nyitDb=VS.filter(x=>x.a==='nyitva').length, N=SZELEPEK.length;
   let s='<svg viewBox="0 0 360 236">';
-  s+=csoR('M0 150H344','e',megy&&nyitDb>0,!megy)+csoR('M344 202H0','v',megy&&nyitDb>0,!megy);
-  s+='<text x="2" y="142" font-size="9.5" fill-opacity=".6">előremenő</text><text x="2" y="194" font-size="9.5" fill-opacity=".6">visszatérő</text>';
-  SZELEPEK.forEach((v,k)=>{const cx=70+k*36, x=VS[k], folyik=megy&&x.a!=='zarva'&&!(x.a==='nyit'&&x.t>60), c=VSZIN[x.a];
-    const d1='M'+(cx-8)+' 150V60', d2='M'+(cx+8)+' 60V202';
-    s+='<path class="cso e'+(folyik?'':' all')+'" style="stroke-width:4" d="'+d1+'"/><path class="aram'+(folyik?' megy':'')+'" d="'+d1+'"/>'+
-       '<path class="cso v'+(folyik?'':' all')+'" style="stroke-width:4" d="'+d2+'"/><path class="aram'+(folyik?' megy':'')+'" d="'+d2+'"/>';
-    s+='<g opacity="'+(folyik?1:.45)+'">'+[0,1,2].map(j=>'<rect x="'+(cx-13+j*9)+'" y="20" width="7" height="40" rx="3" fill="'+(folyik&&elo?hoSzin(elo):'#334155')+'"/>').join('')+'</g>';
-    const h=x.a==='nyitva'?1:x.a==='zarva'?0:x.a==='nyit'?1-x.t/MOZG:x.t/MOZG;
-    s+='<rect x="'+(cx-16)+'" y="100" width="16" height="30" rx="4" fill="#0f172a" stroke="'+c+'" stroke-width="2"/>'+
-       '<rect x="'+(cx-14)+'" y="'+(102+26*(1-h)).toFixed(1)+'" width="12" height="'+(26*h).toFixed(1)+'" rx="2" fill="'+c+'" opacity=".85"/>';
-    s+='<circle cx="'+cx+'" cy="80" r="9" fill="#141d2e" stroke="'+c+'" stroke-width="2"/><text x="'+cx+'" y="84" text-anchor="middle" font-size="10.5" font-weight="800">'+(k+1)+'</text>'});
+  s+='<rect x="8" y="16" width="11" height="204" rx="3" fill="#7f1d1d" stroke="#f87171" stroke-width="1.5"/><rect x="24" y="16" width="11" height="204" rx="3" fill="#1e3a8a" stroke="#60a5fa" stroke-width="1.5"/>'+
+    '<text x="13.5" y="232" text-anchor="middle" font-size="8.5" fill-opacity=".6">osztó</text><text x="31" y="12" text-anchor="middle" font-size="8.5" fill-opacity=".6">gyűjtő</text>';
+  KOR.forEach((ko,kk)=>{const y=48+kk*72, rad=SZELEPEK.map((v,k)=>[v,k]).filter(z=>z[0].k===kk), xe=62+(rad.length-1)*46+14;
+    const fol=k=>megy&&VS[k].a!=='zarva'&&!(VS[k].a==='nyit'&&VS[k].t>60), any=rad.some(z=>fol(z[1]));
+    s+=csoR('M19 '+(y-13)+'H'+xe,'e',any,!any)+csoR('M'+xe+' '+(y+13)+'H35','v',any,!any);
+    s+='<text x="46" y="'+(y-22)+'" font-size="10.5" font-weight="800" style="fill:'+ko.c+'">'+ko.nev+' · '+rad.length+' radiátor</text>';
+    rad.forEach(([v,k],i)=>{const cx=62+i*46, x=VS[k], c=VSZIN[x.a], f=fol(k);
+      s+='<g opacity="'+(f?1:.5)+'">'+[0,1,2,3].map(j=>'<rect x="'+(cx-11+j*6)+'" y="'+(y-8)+'" width="4.5" height="16" rx="2" fill="'+(f&&elo?hoSzin(elo):'#334155')+'"/>').join('')+'</g>';
+      const h=x.a==='nyitva'?1:x.a==='zarva'?0:x.a==='nyit'?1-x.t/MOZG:x.t/MOZG;
+      s+='<rect x="'+(cx+12)+'" y="'+(y-20)+'" width="9" height="15" rx="2" fill="#0f172a" stroke="'+c+'" stroke-width="1.6"/>'+
+         '<rect x="'+(cx+13.5)+'" y="'+(y-18.5+12*(1-h)).toFixed(1)+'" width="6" height="'+(12*h).toFixed(1)+'" rx="1" fill="'+c+'"/>'+
+         '<text x="'+cx+'" y="'+(y+26)+'" text-anchor="middle" font-size="9.5" font-weight="800" fill-opacity=".8">'+(k+1)+'</text>'})});
   s+='</svg>';
-  const all=!megy?(H.ev==='nyar'?'Nyár – a radiátorszelepek zárva, a szivattyú áll.':'A radiátor-szivattyú áll.'):
-    'Ahol a szoba a kívánt alatt van, ott a szelep nyit. Egy nyitás vagy zárás kb. 3 perc – a narancs / kék fej mozgásban van.';
+  const all=!megy?(H.ev==='nyar'?'Nyár – a radiátorfejek zárva, a szivattyú áll.':'A radiátor-szivattyú áll.'):
+    'Minden radiátoron elektromos fej van: ahol a szoba a kívánt alatt van, ott nyit. Egy nyitás vagy zárás kb. 3 perc – a narancs / kék fej mozgásban van. A szivattyú csak akkor jár, ha legalább egy fej már nyitva van.';
   $('eloszto').className='card kor'+(megy&&nyitDb?' fut':'');
-  $('eloszto').innerHTML='<div class="kor-fej"><h3>8 radiátor-kör</h3>'+badge(nyitDb?'b-komf':'b-kezi',nyitDb+' / 8 nyitva')+'</div>'+s+
-    '<div class="elo-cs">'+SZELEPEK.map((v,k)=>'<div style="--c:'+VSZIN[VS[k].a]+'"><b>'+(k+1)+'. '+v.nev+'</b><span>'+vsSzoveg(k)+(v.meg?' · '+v.meg:'')+'</span></div>').join('')+'</div>'+
+  $('eloszto').innerHTML='<div class="kor-fej"><h3>3 kör, '+N+' radiátor</h3>'+badge(nyitDb?'b-komf':'b-kezi',nyitDb+' / '+N+' nyitva')+'</div>'+s+
+    '<div class="elo-cs">'+SZELEPEK.map((v,k)=>'<div style="--c:'+VSZIN[VS[k].a]+'"><b>'+(k+1)+'. '+v.nev+'</b><span>'+KOR[v.k].nev+' · '+vsSzoveg(k)+(v.meg?' · '+v.meg:'')+'</span></div>').join('')+'</div>'+
     '<div class="kor-all">'+all+'</div>';
 }
 setInterval(()=>{let v=false,vege=false;VS.forEach((x,k)=>{if(x.t>0){x.t--;v=true;if(!x.t){VS[k]={a:x.a==='nyit'?'nyitva':'zarva',t:0};vege=true}}});
@@ -503,7 +507,7 @@ function rajzolRendszer(){
   s+='<circle cx="'+X+'" cy="'+YE+'" r="5" fill="#cbd5e1"/><text x="'+X+'" y="'+(YE+22)+'" text-anchor="middle" font-size="10" fill-opacity=".6">T-idom</text>';
   s+='</g>';
   s+='<g>'+[0,1,2,3].map(k=>'<rect x="'+(155+k*12)+'" y="6" width="9" height="'+(YR-6)+'" rx="4" fill="'+(megy?hoSzin(r.elo):'#334155')+'"/>').join('')+'</g>'+
-    '<text x="148" y="26" text-anchor="end" font-size="10.5" fill-opacity=".65">elosztó, 8 kör</text>';
+    '<text x="148" y="26" text-anchor="end" font-size="10.5" fill-opacity=".65">osztó-gyűjtő, 3 kör</text>';
   s+=csoR('M'+X+' '+(YE+D)+'V'+Y3,'e',fel,!fel)+csoR('M'+X+' '+Y3+'V'+Y5,'e',megy,!megy);
   s+=csoR('M'+X+' '+Y5+'V'+YJ,'e',fel,!fel)+csoR('M'+X+' '+YJ+'V'+YR,'e',megy,!megy);
   s+=csoR('M'+X+' '+Y5+'H'+(XG+28),'e',gaz,!gaz)+csoR('M'+XG+' '+(Y5-20)+'V'+YJ+'H'+X,'e',gaz,!gaz);
